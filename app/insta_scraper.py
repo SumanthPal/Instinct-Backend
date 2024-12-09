@@ -1,0 +1,434 @@
+import json
+import os
+import random
+import re
+import time
+
+import dotenv
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.common.exceptions import WebDriverException, NoSuchElementException, TimeoutException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
+
+from utils.logger import logger
+
+"""
+TODO: make sure to check if the json file is already created, otherwise skip
+TODO: make sure to use .env
+TODO: make sure to use the correct path
+"""
+
+
+class InstagramScraper:
+    def __init__(self, username, password):
+        self._username = username
+        self._password = password
+        self._current_page = "none"
+
+        options = Options()
+        self._add_options(options)
+
+        # Initialize WebDriver with options
+        self._driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        self._wait = WebDriverWait(self._driver, 2)
+
+    def login(self) -> None:
+        """
+        Main method to log into Instagram with credentials. Creates a cookies.json file to store cookies.
+        :return: None
+        """
+        try:
+            if os.path.exists("../auth/cookies.json"):
+                self._driver.delete_all_cookies()
+                logger.info("Cookies file found. Loading cookies...")
+                self._driver.get("https://www.instagram.com/")
+                self._load_cookies()
+                logger.info("Cookies loaded.")
+                self._driver.refresh()
+            else:
+                logger.info("No cookies file found. Logging in...")
+                self._driver.get("https://www.instagram.com")
+
+                self._accept_cookies()
+                username_field = self._wait.until(EC.visibility_of_element_located((By.NAME, "username")))
+                password_field = self._wait.until(EC.visibility_of_element_located((By.NAME, "password")))
+
+                # Send login credentials
+                username_field.send_keys(self._username)
+                password_field.send_keys(self._password)
+                password_field.send_keys("\n")  # Simulate pressing Enter
+                logger.info("Login credentials sent.")
+                time.sleep(5)
+
+                # Check if login was successful or failed
+                error_message = self._check_login_error()
+                if error_message:
+                    self._driver_quit()
+                    raise Exception(f"{error_message}")
+
+                self._get_cookies()
+
+        except WebDriverException as e:
+            logger.error(f"Error during login: {e}")
+            self._driver_quit()
+
+    def store_club_data(self, club_username: str) -> None:
+        """
+        Main method for scraping and storing club and post data.
+        :param club_username: the instagram tag of the club
+        """
+        club_info = self.get_club_info(club_username)
+        self.save_club_info(club_info)
+        self.save_post_info(club_username)
+
+    def club_is_in_uci(self, text: str, username: str, insta_handle: str) -> bool:
+        """Check if the text refers to a club at UC Irvine."""
+        combined_text = f"{text} {username} {insta_handle}".lower()
+
+        # Use a regular expression pattern for more flexible matching
+        pattern = r"(\bmerage\b|\buci\b|\buc\s*irvine\b|\banteater\b|\bzot\b|\beater\b|\bcollege\b|\buniversity\b|\binstagram\b|\borganization\b)"
+        return bool(re.search(pattern, combined_text)) and self._is_club(combined_text)
+
+    def get_club_info(self, club_username: str) -> json:
+        """Main scraper method to get club info
+        :param club_username: the instagram tag of the club
+        :return club_info: a dictionary containing the club's information
+        """
+        try:
+
+            profile_url = f"https://www.instagram.com/{club_username}/"
+            self._driver.get(profile_url)
+            self._handle_instagram_more_button()
+            club_links = self._handle_instagram_links_button()
+
+            page_source = self._driver.page_source
+            profile_soup = BeautifulSoup(page_source, 'html.parser')
+
+            club_name, pfp_url = self._find_club_name_pfp(profile_soup, club_username)
+            club_description, followers_count, following_count, posts_count = self._find_club_description(profile_soup)
+            post_links = self._find_club_post_links(profile_soup)
+
+            if not self.club_is_in_uci(club_description, club_name, club_username):
+                raise Exception("Club is not affiliated with UC Irvine or not a club.")
+
+            return {"Instagram Handle": club_username,
+                    "Club Name": club_name,
+                    "Profile Picture": pfp_url,
+                    "Description": club_description,
+                    "Followers": followers_count,
+                    "Following": following_count,
+                    "Post Count": posts_count,
+                    "Club Links": club_links,
+                    "Recent Posts": post_links},
+
+        except WebDriverException as e:
+            logger.error(f"Error fetching club info: {e}")
+            self._driver_quit()
+
+    def get_post_info(self, post_url: str) -> tuple:
+        """Main method to scrape post information."""
+        description = ""
+        date = ""
+
+        try:
+            self._driver.get(post_url)
+            self._wait.until(EC.presence_of_element_located((By.XPATH,
+                                                             "//h1[contains(@class, '_ap3a') and contains(@class, '_aaco') and contains(@class, '_aacu')]")))
+
+            post_source = self._driver.page_source
+            post_soup = BeautifulSoup(post_source, 'html.parser')
+
+            # Looks for post description
+            h1_element = post_soup.find('h1', class_="_ap3a _aaco _aacu _aacx _aad7 _aade")
+            description = h1_element.text
+
+            # looks for post time
+            post_time = post_soup.find('time', class_="_a9ze _a9zf")
+            date = post_time['datetime']
+            logger.info("Successfully fetched post info!")
+        except WebDriverException as e:
+            logger.error(f"Error fetching post info: {e}")
+            self._driver_quit()
+
+        return description, date
+
+    def save_post_info(self, club_username: str):
+        """Save the description and date of each post into a file"""
+
+        post_links = self._get_club_post_links(club_username)
+
+        if not os.path.exists(f"../data/{club_username}/posts"):
+            os.makedirs(f"../data/{club_username}/posts")
+
+        for post in post_links:
+            description, date = self.get_post_info(post)
+            with open(f"../data/{club_username}/posts/{date}.json", "w") as file:
+                json.dump({"Description": description, "Date": date}, file)
+
+    def save_club_info(self, club_info: json):
+        """Save the club information into a file"""
+        dir_path = f"../data/{club_info[0]["Instagram Handle"]}"
+
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+            logger.info(f"Directory, {dir_path} created.")
+
+        with open(f"{dir_path}/club_info.json", "w") as file:
+            json.dump(club_info[0], file)
+            logger.info("Club info saved.")
+
+    def check_instagram_handle(self, club_username) -> bool:
+        try:
+            # Navigate to the Instagram page
+            self._driver.get(f"https://www.instagram.com/{club_username}/")
+
+            # Wait for the error message or the page content
+            try:
+                # Wait specifically for the error span to appear
+                WebDriverWait(self._driver, 10).until(
+                    EC.visibility_of_element_located(
+                        (By.XPATH, "//span[contains(text(), \"Sorry, this page isn't available.\")]")
+                    )
+                )
+                return False  # Error span found, handle is invalid
+            except TimeoutException:
+                # If the span isn't found within the timeout, assume the page is valid
+                return True
+
+        except WebDriverException as e:
+            # Handle other driver-related errors
+            print(f"WebDriver error: {e}")
+            return False
+
+    def _handle_instagram_links_button(self):
+        try:
+            # Wait for the button to be present, but allow for a possible timeout
+            # check if there is only one link:
+            try:
+                link_element = self._wait.until(EC.presence_of_element_located(
+                    (By.XPATH, "//a[@rel='me nofollow noopener noreferrer' and @target='_blank']")))
+                return [link_element.get_attribute('href')]
+            except TimeoutException:
+                pass
+            self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button._acan._acao._acas._aj1-._ap30')))
+
+            # Find the button and click it if it's found
+            button = self._driver.find_element(By.CSS_SELECTOR, 'button._acan._acao._acas._aj1-._ap30')
+            button.click()
+            logger.info("Links button clicked successfully.")
+
+            self._wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//a[@rel='me nofollow noopener noreferrer' and @target='_blank']")))
+            links = self._driver.find_elements(By.XPATH,
+                                               "//a[@rel='me nofollow noopener noreferrer' and @target='_blank']")
+            logger.info("Links found successfully.")
+
+            urls = [link.get_attribute('href') for link in links]
+            logger.info("URLs extracted successfully.")
+
+            close_button = self._driver.find_element(By.CSS_SELECTOR, 'div[aria-label="Close"]')
+            close_button.click()
+            logger.info("Close button clicked successfully.")
+
+            return urls
+
+        except TimeoutException:
+            # This will catch the case where the element is not found within the timeout
+            logger.warning("Links button not found within the timeout.")
+
+        except Exception as e:
+            # Catch any other unexpected exceptions
+            logger.error(f"An error occurred while trying to interact with the links button: {e}")
+
+    def _handle_instagram_more_button(self):
+        try:
+            self._wait.until(EC.presence_of_all_elements_located((By.XPATH, "//a[contains(@href, '/p/')]")))
+            button_element = self._wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//span[contains(@class, 'x1lliihq') and text()='more']")))
+
+            button_element.click()
+            logger.info("Button for more info clicked!")
+        except (NoSuchElementException, TimeoutException):
+            logger.info("More... button not found / timeout error.")
+
+    def _find_club_name_pfp(self, profile_soup: BeautifulSoup, club_username: str):
+        club_name = profile_soup.find("span", class_="x1lliihq x1plvlek xryxfnj x1n2onr6 x1ji0vk5 x18bv5gf "
+                                                     "x193iq5w xeuugli x1fj9vlw x13faqbe x1vvkbs x1s928wv xhkezso "
+                                                     "x1gmr53x x1cpjm7i x1fgarty x1943h6x x1i0vuye xvs91rp "
+                                                     "x1s688f x5n08af x10wh9bi x1wdrske x8viiok x18hxmgj").text
+        club_tag = profile_soup.find("img", alt=f"{club_username}'s profile picture")
+        if not club_tag:
+            raise Exception("Profile picture not found.")
+        pfp_url = club_tag.get("src")
+        return club_name, pfp_url
+
+    def _find_club_description(self, profile_soup: BeautifulSoup):
+        meta_tag = profile_soup.find('meta', {'name': 'description'})
+        if not meta_tag:
+            raise Exception("Description not found.")
+
+        description = meta_tag.get('content', '')
+
+        parts = description.split(' - ')
+
+        # Extract follower, following, and post counts
+
+        counts = parts[0].split(', ')
+        followers_count = counts[0].split(' ')[0].replace(',', '')
+        logger.info("obtained follower count...")
+        following_count = counts[1].split(' ')[0].replace(',', '')
+        logger.info("obtained following count...")
+        posts_count = counts[2].split(' ')[0].replace(',', '')
+        logger.info("obtained post count...")
+
+        # The rest of the string is the description
+        club_description = parts[1:]
+        logger.info("obtained description...")
+
+        return club_description, followers_count, following_count, posts_count
+
+    def _find_club_post_links(self, profile_soup: BeautifulSoup):
+        """
+        Fins all links pertaining to posts when scraping
+        :param profile_soup:
+        :return:
+        """
+        links = profile_soup.find_all('a', href=True)
+
+        post_links = []
+        for link in links:
+            href = link['href']
+            if '/p/' in href:
+                post_url = f"https://www.instagram.com{href}"
+                post_links.append(post_url)
+        logger.info("obtained post links...")
+        return post_links
+
+    def _is_club(self, text):
+        """Check if the text refers to a club or organization."""
+        keywords = [
+            "club", "organization", "group", "association", "society", "committee", "team",
+            "union", "alliance", "board", "council", "network", "federation", "chapter",
+            "guild", "order", "fraternity", "sorority", "coalition", "initiative", "league",
+            "academy", "community", "department", "program", "division", "student club",
+            "interest group", "volunteers", "task force", "associated students", "student government",
+            "programs", "office", "center", "institute", "society", "student council", "student union",
+        ]
+
+        # Use regex to find whole words only
+        text_lower = text.lower()
+        pattern = r'\b(' + '|'.join(keywords) + r')\b'
+        return bool(re.search(pattern, text_lower))
+
+    def _get_club_post_links(self, club_username: str) -> list:
+        """
+        Parses the club_info.json file to get the post links.
+        :param club_username:
+        :return:
+        """
+        with open(f"../data/{club_username}/club_info.json", "r") as file:
+            clubs_info = json.load(file)
+
+        return clubs_info["Recent Posts"]
+
+    def _driver_quit(self):
+        if hasattr(self, '_driver') and self._driver:
+            self._driver.quit()
+
+    def _add_options(self, option: Options):
+        """Add options to the Chrome WebDriver."""
+        option.add_argument(f"user-agent={self._set_random_user_agent()}")
+        option.add_argument("--disable-blink-features=AutomationControlled")
+        option.add_argument("--disable-notifications")
+        option.add_argument("--disable-popup-blocking")
+        option.add_argument("--disable-infobars")
+        option.add_argument("--disable-extensions")
+        option.add_argument("--disable-gpu")
+        option.add_argument("--disable-dev-shm-usage")
+        option.add_argument("--no-sandbox")
+
+        prefs = {"profile.default_content_setting_values.images": 2}
+        option.add_experimental_option("prefs", prefs)
+        option.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
+        option.add_experimental_option("useAutomationExtension", False)
+
+    def _set_random_user_agent(self):
+        """Randomly selects a User-Agent string from the list."""
+        user_agents = [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 "
+            "Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:92.0) Gecko/20100101 Firefox/92.0",
+            "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:39.0) Gecko/20100101 Firefox/39.0",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/89.0.4389.128 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/80.0.3987.122 Safari/537.36",
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:85.0) Gecko/20100101 Firefox/85.0"
+        ]
+        return random.choice(user_agents)
+
+    def _load_cookies(self):
+        """Load cookies from the cookies.json file."""
+        with open("../auth/cookies.json", "r") as file:
+            cookies = json.load(file)
+            for cookie in cookies:
+                self._driver.add_cookie(cookie)
+
+    def _get_cookies(self):
+        try:
+            save_button = self._wait.until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Save info')]")))
+            save_button.click()
+            logger.info(self._driver.get_cookies())
+            with open("../auth/cookies.json", "w") as file:
+                json.dump(self._driver.get_cookies(), file)
+                logger.info("Cookies saved.")
+        except Exception as e:
+            logger.error(f"Error saving cookies: {e}")
+
+    def _accept_cookies(self):
+        """Handles the cookie popup."""
+        try:
+            # Wait for the popup and try accepting it using XPath (you can try to use other methods like CSS selectors too)
+            accept_button = self._wait.until(
+                EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Allow all cookies')]"))
+            )
+            # Perform a click on the "Accept" button
+            accept_button.click()
+            logger.info("External Cookies accepted.")
+        except Exception as e:
+            logger.error(f"Cookies button not found or couldn't be clicked: {e}")
+
+    def _check_login_error(self):
+        """Check if there is an error message after login attempt."""
+        try:
+            # Look for the error message in the class "_ab2z" (Instagram's error message class)
+            error_element = self._driver.find_element(By.CLASS_NAME, "_ab2z")
+            if error_element:
+                return error_element.text
+        except Exception:
+            # If no error message is found, return None (indicating no error)
+            return None
+
+
+if __name__ == "__main__":
+    # Set your Instagram credentials here
+    try:
+
+        dotenv.load_dotenv()
+        scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
+
+        scraper.login()
+
+        scraper.store_club_data("merageleads")
+
+
+    except AttributeError as e:
+        logger.error("Enter a valid username ")
+    except Exception as e:
+        logger.error(f"Scraping failed: {e}")
