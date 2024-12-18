@@ -3,7 +3,7 @@ import os
 import random
 import re
 import time
-
+import sys
 import dotenv
 from bs4 import BeautifulSoup
 from selenium import webdriver
@@ -14,13 +14,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
-
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
 
 """
-TODO: make sure to check if the json file is already created, otherwise skip
-TODO: make sure to use .env
-TODO: make sure to use the correct path
+TODO: fix pathing issue
+TODO: handle errors
 """
 
 
@@ -43,11 +42,12 @@ class InstagramScraper:
         :return: None
         """
         try:
-            if os.path.exists("../auth/cookies.json"):
+            cookies_path = os.path.join(os.path.dirname(__file__), "..", "auth", 'cookies.json')
+            if os.path.exists(cookies_path):
                 self._driver.delete_all_cookies()
                 logger.info("Cookies file found. Loading cookies...")
                 self._driver.get("https://www.instagram.com/")
-                self._load_cookies()
+                self._load_cookies(cookies_path)
                 logger.info("Cookies loaded.")
                 self._driver.refresh()
             else:
@@ -103,6 +103,9 @@ class InstagramScraper:
 
             profile_url = f"https://www.instagram.com/{club_username}/"
             self._driver.get(profile_url)
+            if not self.check_instagram_handle(club_username):
+                raise Exception("Invalid Instagram handle.")
+            
             self._handle_instagram_more_button()
             club_links = self._handle_instagram_links_button()
 
@@ -162,23 +165,26 @@ class InstagramScraper:
 
         post_links = self._get_club_post_links(club_username)
 
-        if not os.path.exists(f"../data/{club_username}/posts"):
-            os.makedirs(f"../data/{club_username}/posts")
+        club_path = os.path.join(os.path.dirname(__file__), "..", "data", club_username, "posts")
+        if not os.path.exists(club_path):
+            os.makedirs(club_path)
 
         for post in post_links:
             description, date = self.get_post_info(post)
-            with open(f"../data/{club_username}/posts/{date}.json", "w") as file:
+            post_path = os.path.join(club_path, f"{date}.json")
+            with open(post_path, "w") as file:
                 json.dump({"Description": description, "Date": date}, file)
 
     def save_club_info(self, club_info: json):
         """Save the club information into a file"""
-        dir_path = f"../data/{club_info[0]["Instagram Handle"]}"
+        
+        club_info_path = os.path.join(os.path.dirname(__file__), "..", "data", f"{club_info[0]['Instagram Handle']}")
 
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-            logger.info(f"Directory, {dir_path} created.")
+        if not os.path.exists(club_info_path):
+            os.makedirs(club_info_path)
+            logger.info(f"Directory, {club_info_path} created.")
 
-        with open(f"{dir_path}/club_info.json", "w") as file:
+        with open(f"{club_info_path}/club_info.json", "w") as file:
             json.dump(club_info[0], file)
             logger.info("Club info saved.")
 
@@ -372,9 +378,9 @@ class InstagramScraper:
         ]
         return random.choice(user_agents)
 
-    def _load_cookies(self):
+    def _load_cookies(self, path):
         """Load cookies from the cookies.json file."""
-        with open("../auth/cookies.json", "r") as file:
+        with open(path, "r") as file:
             cookies = json.load(file)
             for cookie in cookies:
                 self._driver.add_cookie(cookie)
@@ -432,3 +438,5 @@ if __name__ == "__main__":
         logger.error("Enter a valid username ")
     except Exception as e:
         logger.error(f"Scraping failed: {e}")
+    finally:
+        scraper._driver_quit()
