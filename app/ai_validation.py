@@ -1,17 +1,15 @@
 import ast
 import os
 import dotenv
-import spacy
 from openai import OpenAI
 import json
 
 
 class EventParser:
     def __init__(self, username: str):
-        # Load the spaCy language model
-        self.nlp = spacy.load('en_core_web_md')
+
         self.username = username
-        self._user_path = self.validate_username()
+        self._user_path, self._post_dir = self.validate_username()
 
         # Load environment variables (for OpenAI API key)
         dotenv.load_dotenv()
@@ -19,14 +17,14 @@ class EventParser:
 
 
     def validate_username(self)-> str:
-        user_dir = f"../data/{self.username}"
+        user_dir =  os.path.join(os.path.dirname(__file__), '..', 'data', self.username)
         if not os.path.exists(user_dir):
             raise FileNotFoundError(f"Directory for {self.username} not found")
-        post_dir = f"{user_dir}/posts"
+        post_dir = os.path.join(user_dir, "posts")
         if not os.path.exists(post_dir):
             raise FileNotFoundError(f"Post Directory for {self.username} not found")
         if os.listdir(post_dir):
-            return user_dir
+            return user_dir, post_dir
         else:
             raise FileNotFoundError(f"No posts found for {self.username}")
 
@@ -36,7 +34,8 @@ class EventParser:
         try:
             with open(post_path, 'r') as file:
                 post_data = json.load(file)
-
+            
+           
             # Extract the text from the post data
             post_text = post_data['Description']
             post_date = post_data['Date']
@@ -48,27 +47,28 @@ class EventParser:
 
             # Send request to OpenAI API to extract dates
             completion = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Use the correct model name
+                model="gpt-4o-mini",  # Correct model name
                 messages=[
                     {
                         "role": "system",
-                        "content": "I want you to return the iso date with time for a piece of text. "
-                                   "There could be multiple dates and times listed, so if there are multiple, "
-                                   "separate them with commas. I will also give a context date in iso format, and if a "
-                                   "day of the week is given, use the context date. Simply output a list of tuples in the format "
-                                   "(\"iso date\", \"what the event is with any links provided\")."
+                        "content": "I want you to parse a description and a context date to give me information on an event listed in it."
+                        "I want you to return the ISO date with time for a piece of text and what you think the estimated duration of the event is(if long, just put sign up/ start)."
+                        "There could be multiple dates and times listed, so if there are multiple, "
+                        "I want all occurences. I will also give a context date in iso format, and if a "
+                        "day of the week is given, use the context date. Simply output a list of dictionaries in the format "
+                        "[{Name: \"What you think the event name is \", Date: \"iso date\", Details: \"what the event is with any links provided\", Duration: {\"estimated duration\" ex. \"days:\"...:, \"hours:\":...,}}...]. No duplicates, no newlines, no json starting."
                     },
                     {
                         "role": "user",
                         "content": f"{post_text} context date: {post_date}"
                     }
-                ],
-                temperature=0.5  # Adjust the creativity level
-            )
+    ],
+    temperature=0.5  # Adjust the creativity level
+) 
 
             # Return parsed date results
             print("Successful parse.")
-            return ast.literal_eval(completion.choices[0].message.content)
+            return json.loads(completion.choices[0].message.content)
 
         except AttributeError as e:
             print(f"File cannot find correct attributes {e}")
@@ -78,9 +78,8 @@ class EventParser:
             return []
 
     def parse_all_posts(self):
-        post_dir = f"{self._user_path}/posts"
-        for post in os.listdir(post_dir):
-            post_path = f"{post_dir}/{post}"
+        for post in os.listdir(self._post_dir):
+            post_path = os.path.join(self._post_dir, post)
             parsed_info = self.parse_post(post_path)
             self.store_parsed_info(post_path, parsed_info)
 
@@ -98,10 +97,9 @@ class EventParser:
             print(f"Error while storing parsed info: {e}")
 
 
-
 if __name__ == "__main__":
     # Example usage
-    parser = EventParser(username="wsg")
+    parser = EventParser(username="icssc.uci")
     parser.parse_all_posts()
 
 
