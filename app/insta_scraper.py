@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 import random
@@ -34,7 +35,7 @@ class InstagramScraper:
 
         # Initialize WebDriver with options
         self._driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        self._wait = WebDriverWait(self._driver, 2)
+        self._wait = WebDriverWait(self._driver, 5)
 
     def login(self) -> None:
         """
@@ -77,14 +78,22 @@ class InstagramScraper:
             logger.error(f"Error during login: {e}")
             self._driver_quit()
 
-    def store_club_data(self, club_username: str) -> None:
+    def store_club_data(self, club_username: str) -> bool:
         """
         Main method for scraping and storing club and post data.
         :param club_username: the instagram tag of the club
         """
-        club_info = self.get_club_info(club_username)
-        self.save_club_info(club_info)
-        self.save_post_info(club_username)
+        try:
+            club_info = self.get_club_info(club_username)
+            self.save_club_info(club_info)
+            self.save_post_info(club_username)
+            return True
+        except AttributeError as e:
+            logger.error("Enter a valid username")
+            return False
+        except Exception as e:
+            logger.error(f"Scraping failed: {e}")
+            return False
 
     def club_is_in_uci(self, text: str, username: str, insta_handle: str) -> bool:
         """Check if the text refers to a club at UC Irvine."""
@@ -323,7 +332,7 @@ class InstagramScraper:
             "guild", "order", "fraternity", "sorority", "coalition", "initiative", "league",
             "academy", "community", "department", "program", "division", "student club",
             "interest group", "volunteers", "task force", "associated students", "student government",
-            "programs", "office", "center", "institute", "society", "student council", "student union",
+            "programs", "office", "center", "institute", "society", "student council", "student union", "university"
         ]
 
         # Use regex to find whole words only
@@ -337,7 +346,8 @@ class InstagramScraper:
         :param club_username:
         :return:
         """
-        with open(f"../data/{club_username}/club_info.json", "r") as file:
+        club_info_path = os.path.join(os.path.dirname(__file__), "..", "data", club_username, "club_info.json")
+        with open(club_info_path, "r") as file:
             clubs_info = json.load(file)
 
         return clubs_info["Recent Posts"]
@@ -421,22 +431,29 @@ class InstagramScraper:
             # If no error message is found, return None (indicating no error)
             return None
 
+def scrape_sequence(username):
+    try:
+        scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
+        scraper.login()
+        scraper.store_club_data(username)
+    finally:
+        scraper._driver_quit()
+
+def multi_threaded_scrape(clubs, max_threads):
+    with ThreadPoolExecutor(max_threads) as executor:
+        print("Scrapping clubs...")
+        executor.map(scrape_sequence, clubs)
 
 if __name__ == "__main__":
     # Set your Instagram credentials here
-    try:
 
         dotenv.load_dotenv()
-        scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
+        
+        clubs = ['icssc.uci','productuci','uciblockchain','fusionatuci']
+        max_threads = 3
+        multi_threaded_scrape(clubs, max_threads)
+            
+        
+        
 
-        scraper.login()
 
-        scraper.store_club_data("merageleads")
-
-
-    except AttributeError as e:
-        logger.error("Enter a valid username ")
-    except Exception as e:
-        logger.error(f"Scraping failed: {e}")
-    finally:
-        scraper._driver_quit()

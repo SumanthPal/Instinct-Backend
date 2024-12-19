@@ -6,27 +6,24 @@ import json
 
 
 class EventParser:
-    def __init__(self, username: str):
-
-        self.username = username
-        self._user_path, self._post_dir = self.validate_username()
+    def __init__(self):
 
         # Load environment variables (for OpenAI API key)
         dotenv.load_dotenv()
         self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
-    def validate_username(self)-> str:
-        user_dir =  os.path.join(os.path.dirname(__file__), '..', 'data', self.username)
+    def validate_username(self, username)-> str:
+        user_dir =  os.path.join(os.path.dirname(__file__), '..', 'data', username)
         if not os.path.exists(user_dir):
-            raise FileNotFoundError(f"Directory for {self.username} not found")
+            raise FileNotFoundError(f"Directory for {username} not found")
         post_dir = os.path.join(user_dir, "posts")
         if not os.path.exists(post_dir):
-            raise FileNotFoundError(f"Post Directory for {self.username} not found")
+            raise FileNotFoundError(f"Post Directory for {username} not found")
         if os.listdir(post_dir):
             return user_dir, post_dir
         else:
-            raise FileNotFoundError(f"No posts found for {self.username}")
+            raise FileNotFoundError(f"No posts found for {username}")
 
 
     def parse_post(self, post_path: str):
@@ -77,9 +74,10 @@ class EventParser:
             print(f"Error while parsing: {e}")
             return []
 
-    def parse_all_posts(self):
-        for post in os.listdir(self._post_dir):
-            post_path = os.path.join(self._post_dir, post)
+    def parse_all_posts(self, username):
+        _, post_dir = self.validate_username(username)
+        for post in os.listdir(post_dir):
+            post_path = os.path.join(post_dir, post)
             parsed_info = self.parse_post(post_path)
             self.store_parsed_info(post_path, parsed_info)
 
@@ -87,8 +85,8 @@ class EventParser:
         try:
             with open(post_path, 'r') as file:
                 post_data = json.load(file)
-            if 'Parsed' in post_data:
-                raise Exception("Post has already been parsed.")
+            if  parsed_info == []:
+                return
             post_data['Parsed'] = parsed_info
             with open(post_path, 'w') as file:
                 print("Successfully stored")
@@ -96,11 +94,20 @@ class EventParser:
         except Exception as e:
             print(f"Error while storing parsed info: {e}")
 
-
+    def is_parsed(self, post_path: str):
+        with open(post_path, 'r') as file:
+            post_data = json.load(file)
+        return 'Parsed' in post_data
+    
+    def check_if_first_is_parsed(self, username):
+        _, post_dir = self.validate_username(username)
+        post_paths = os.listdir(post_dir)
+        return self.is_parsed(os.path.join(post_dir, post_paths[0]))
+        
 if __name__ == "__main__":
     # Example usage
-    parser = EventParser(username="icssc.uci")
-    parser.parse_all_posts()
+    parser = EventParser()
+    parser.parse_all_posts("merageleads")
 
 
 

@@ -4,7 +4,7 @@ from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
 # Define the log file directory
-log_file_dir = '../logs'
+log_file_dir = os.path.join(os.path.dirname(__file__), '..', 'logs')
 
 # Create the log file directory if it doesn't exist
 if not os.path.exists(log_file_dir):
