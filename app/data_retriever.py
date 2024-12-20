@@ -20,6 +20,17 @@ class DataRetriever:
         
         return club_data
     
+    def retrieve_club_list(self)-> json:
+        club_path = os.path.join(self.working_path, 'clubs.json')
+        with open(club_path, 'r') as file:
+            club_list = json.load(file)
+        return club_list
+    
+    def modift_club_list(self, club_list: json):
+        club_path = os.path.join(self.working_path, 'clubs.json')
+        with open(club_path, 'w') as file:
+            json.dump(club_list, file)
+    
     def fetch_club_posts(self, club_name):
         if not self.club_data_exists(club_name):
             raise FileNotFoundError(f"Directory for {club_name} not found")
