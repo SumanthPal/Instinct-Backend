@@ -18,10 +18,6 @@ from webdriver_manager.chrome import ChromeDriverManager
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
 
-"""
-TODO: fix pathing issue
-TODO: handle errors
-"""
 
 
 class InstagramScraper:
@@ -34,8 +30,16 @@ class InstagramScraper:
         self._add_options(options)
 
         # Initialize WebDriver with options
-        self._driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        self._wait = WebDriverWait(self._driver, 5)
+        print("initing driver")
+        self._driver = webdriver.Chrome(options=options)
+        print("driver inited")
+        self._wait = WebDriverWait(self._driver, 3)
+        
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._driver_quit()
 
     def login(self) -> None:
         """
@@ -75,7 +79,7 @@ class InstagramScraper:
                 self._get_cookies()
 
         except WebDriverException as e:
-            logger.error(f"Error during login: {e}")
+            logger.error(f"Error during login: {e}", exc_info=True)
             self._driver_quit()
 
     def store_club_data(self, club_username: str) -> bool:
@@ -92,7 +96,7 @@ class InstagramScraper:
             logger.error("Enter a valid username")
             return False
         except Exception as e:
-            logger.error(f"Scraping failed: {e}")
+            logger.error(f"Scraping failed: {e}", exc_info=True)
             return False
 
     def club_is_in_uci(self, text: str, username: str, insta_handle: str) -> bool:
@@ -112,8 +116,8 @@ class InstagramScraper:
 
             profile_url = f"https://www.instagram.com/{club_username}/"
             self._driver.get(profile_url)
-            if not self.check_instagram_handle(club_username):
-                raise Exception("Invalid Instagram handle.")
+            # if not self.check_instagram_handle(club_username):
+            #     raise Exception("Invalid Instagram handle.")
             
             self._handle_instagram_more_button()
             club_links = self._handle_instagram_links_button()
@@ -219,7 +223,6 @@ class InstagramScraper:
             # Handle other driver-related errors
             print(f"WebDriver error: {e}")
             return False
-
     def _handle_instagram_links_button(self):
         try:
             # Wait for the button to be present, but allow for a possible timeout
@@ -358,20 +361,31 @@ class InstagramScraper:
 
     def _add_options(self, option: Options):
         """Add options to the Chrome WebDriver."""
-        option.add_argument(f"user-agent={self._set_random_user_agent()}")
-        option.add_argument("--disable-blink-features=AutomationControlled")
-        option.add_argument("--disable-notifications")
-        option.add_argument("--disable-popup-blocking")
-        option.add_argument("--disable-infobars")
-        option.add_argument("--disable-extensions")
-        option.add_argument("--disable-gpu")
-        option.add_argument("--disable-dev-shm-usage")
-        option.add_argument("--no-sandbox")
+        # Add all the common arguments in one go
+        args = [
+            f"user-agent={self._set_random_user_agent()}",
+            "--disable-blink-features=AutomationControlled",
+            "--disable-notifications",
+            "--disable-popup-blocking",
+            "--disable-infobars",
+            "--disable-extensions",
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--no-sandbox",
+            #"--headless",  # Run in headless mode for better speed
+        ]
+        for arg in args:
+            option.add_argument(arg)
+            
+        
 
-        prefs = {"profile.default_content_setting_values.images": 2}
-        option.add_experimental_option("prefs", prefs)
+        # Set preferences with one call
+        option.add_experimental_option("prefs", {"profile.default_content_setting_values.images": 2})
+
+        # Exclude switches in a single call
         option.add_experimental_option("excludeSwitches", ["enable-logging", "enable-automation"])
         option.add_experimental_option("useAutomationExtension", False)
+
 
     def _set_random_user_agent(self):
         """Randomly selects a User-Agent string from the list."""
@@ -430,28 +444,49 @@ class InstagramScraper:
         except Exception:
             # If no error message is found, return None (indicating no error)
             return None
-
-def scrape_sequence(username):
+def scrape_sequence(username: str) -> None:
+    """
+    Scrape the Instagram page of a club and store the data.
+    Args:
+        username (str): The Instagram username of the club.
+    """
+    scraper = None
     try:
+        logger.info(f"Scraping {username}...")
         scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
+        logger.info("Init scraper")
         scraper.login()
+        logger.info("Logged in")
         scraper.store_club_data(username)
+        logger.info(f"Scraping of {username} complete.")
+    except Exception as e:
+        logger.error(f"An error occurred: {e}")
     finally:
-        scraper._driver_quit()
+        if scraper:
+            scraper._driver_quit()
 
-def multi_threaded_scrape(clubs, max_threads):
+def multi_threaded_scrape(clubs:list[str], max_threads:int)-> None:
+    """Runs scrapper on multiple threads.
+
+    Args:
+        clubs (list): instagram usernames of club
+        max_threads (int): number of threads
+    """
     with ThreadPoolExecutor(max_threads) as executor:
-        print("Scrapping clubs...")
+        logger.info("Scrapping clubs...")
         executor.map(scrape_sequence, clubs)
 
 if __name__ == "__main__":
     # Set your Instagram credentials here
 
         dotenv.load_dotenv()
+        starttime = time.time()
         
         clubs = ['icssc.uci','productuci','uciblockchain','fusionatuci']
-        max_threads = 3
+        max_threads = 4
         multi_threaded_scrape(clubs, max_threads)
+        elapsed_time = time.time() - starttime
+        logger.info(f"Time elapsed: {elapsed_time}")
             
         
         

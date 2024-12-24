@@ -36,4 +36,4 @@ CREATE TABLE IF NOT EXISTS calendar_files (
     club_id INTEGER NOT NULL,
     file_path TEXT NOT NULL,
     FOREIGN KEY (club_id) REFERENCES clubs (id) ON DELETE CASCADE
-);
+)

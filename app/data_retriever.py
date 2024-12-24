@@ -26,7 +26,7 @@ class DataRetriever:
             club_list = json.load(file)
         return club_list
     
-    def modift_club_list(self, club_list: json):
+    def modify_club_list(self, club_list: json):
         club_path = os.path.join(self.working_path, 'clubs.json')
         with open(club_path, 'w') as file:
             json.dump(club_list, file)
