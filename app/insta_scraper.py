@@ -369,7 +369,7 @@ class InstagramScraper:
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-            "--headless",  # Run in headless mode for better speed
+           # "--headless",  # Run in headless mode for better speed
         ]
         for arg in args:
             option.add_argument(arg)

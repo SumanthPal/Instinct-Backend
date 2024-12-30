@@ -5,7 +5,7 @@ from calendar_connection import CalendarConnection
 from insta_scraper import InstagramScraper, multi_threaded_scrape
 from data_retriever import DataRetriever 
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from threading import Lock
 import dotenv
 import os
 import sys
@@ -72,23 +72,51 @@ def consolidate_clubs():
     
     return jsonify({"message": "Club successfully added"}), 201
     
+job_running = False
+job_lock = Lock()
 
 def reload_data():
-    print("reloading")
-    logger.info("reloading started")
-    parser = EventParser()
-    clubs = ['icssc.uci', 'fusionatuci','productuci', 'accounting.uci','asuci_','ucirvine']
-    multi_threaded_scrape(clubs,3)
-    for club in clubs:
-        parser.parse_all_posts(club)
-        calendar.create_calendar_file(club)
-   
-schedular = BackgroundScheduler(daemon=True)
-schedular.add_job(reload_data, 'interval', minutes=1)
-schedular.start()
+    global job_running
 
+    with job_lock:
+        if job_running:
+            logger.info("Job is already running, skipping this execution.")
+            return  # Skip execution if the job is already running
+        job_running = True
+
+    try:
+        logger.info("Reloading data started.")
+
+        # Simulated tasks
+        parser = EventParser()
+        clubs = ['icssc.uci', 'fusionatuci', 'productuci', 'accounting.uci', 'asuci_', 'ucirvine']
+        multi_threaded_scrape(clubs, 3)
+
+        for club in clubs:
+            parser.parse_all_posts(club)
+            calendar.create_calendar_file(club)
+
+        logger.info("Reloading data completed.")
+    except Exception as e:
+        logger.error(f"An error occurred during data reloading: {e}")
+    finally:
+        with job_lock:
+            job_running = False  # Reset the flag to allow the next execution
+
+# Initialize the scheduler
+scheduler = BackgroundScheduler(daemon=True)
+
+# Add job with misfire grace time to handle skipped runs gracefully
+scheduler.add_job(
+    reload_data,
+    'interval',
+    minutes=1,
+    misfire_grace_time=30  # Skip missed executions if the job overlaps
+)
 
     
 if __name__ == "__main__":
+    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        scheduler.start()
     app.run(debug=True, host='127.0.0.1', port=5022)  # Change 5000 to your desired porta
     
