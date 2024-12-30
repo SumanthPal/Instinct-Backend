@@ -1,13 +1,12 @@
 import os
-
+import sys
 import dotenv
-from google_auth_oauthlib.flow import InstalledAppFlow
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "app"))
 
-from app import ai_validation, calendar_connection
-from app.insta_scraper import InstagramScraper
+from app import server
 
 
-def main():
+
     
 if __name__ == "__main__":
-    main()
+    server.app.run(debug=True, host='127.0.0.1', port=5022)

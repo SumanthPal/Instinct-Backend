@@ -14,7 +14,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
 
@@ -99,13 +98,13 @@ class InstagramScraper:
             logger.error(f"Scraping failed: {e}", exc_info=True)
             return False
 
-    def club_is_in_uci(self, text: str, username: str, insta_handle: str) -> bool:
-        """Check if the text refers to a club at UC Irvine."""
-        combined_text = f"{text} {username} {insta_handle}".lower()
+    # def club_is_in_uci(self, text: str, username: str, insta_handle: str) -> bool:
+    #     """Check if the text refers to a club at UC Irvine."""
+    #     combined_text = f"{text} {username} {insta_handle}".lower()
 
-        # Use a regular expression pattern for more flexible matching
-        pattern = r"(\bmerage\b|\buci\b|\buc\s*irvine\b|\banteater\b|\bzot\b|\beater\b|\bcollege\b|\buniversity\b|\binstagram\b|\borganization\b)"
-        return bool(re.search(pattern, combined_text)) and self._is_club(combined_text)
+    #     # Use a regular expression pattern for more flexible matching
+    #     pattern = r"(\bmerage\b|\buci\b|\buc\s*irvine\b|\banteater\b|\bzot\b|\beater\b|\bcollege\b|\buniversity\b|\binstagram\b|\borganization\b)"
+    #     return bool(re.search(pattern, combined_text)) and self._is_club(combined_text)
 
     def get_club_info(self, club_username: str) -> json:
         """Main scraper method to get club info
@@ -129,8 +128,6 @@ class InstagramScraper:
             club_description, followers_count, following_count, posts_count = self._find_club_description(profile_soup)
             post_links = self._find_club_post_links(profile_soup)
 
-            if not self.club_is_in_uci(club_description, club_name, club_username):
-                raise Exception("Club is not affiliated with UC Irvine or not a club.")
 
             return {"Instagram Handle": club_username,
                     "Club Name": club_name,
@@ -372,7 +369,7 @@ class InstagramScraper:
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-            #"--headless",  # Run in headless mode for better speed
+            "--headless",  # Run in headless mode for better speed
         ]
         for arg in args:
             option.add_argument(arg)
@@ -444,46 +441,73 @@ class InstagramScraper:
         except Exception:
             # If no error message is found, return None (indicating no error)
             return None
-def scrape_sequence(username: str) -> None:
+
+def chunk_list(lst, n):
+    """Divide a list into n chunks, prioritizing evenly-sized distributions."""
+    avg = len(lst) // n
+    remainder = len(lst) % n
+    chunks = []
+    start = 0
+
+    for i in range(n):
+        extra = 1 if i < remainder else 0  # Distribute the remainder
+        end = start + avg + extra
+        chunks.append(lst[start:end])
+        start = end
+
+    return chunks
+def scrape_sequence(username_list: list[str]) -> None:
     """
     Scrape the Instagram page of a club and store the data.
     Args:
-        username (str): The Instagram username of the club.
+        username_list (list[str]): List of Instagram usernames of clubs.
     """
     scraper = None
     try:
-        logger.info(f"Scraping {username}...")
         scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
         logger.info("Init scraper")
         scraper.login()
         logger.info("Logged in")
-        scraper.store_club_data(username)
-        logger.info(f"Scraping of {username} complete.")
+        for username in username_list:
+            logger.info(f"Scraping {username}...")
+            scraper.store_club_data(username)
+            logger.info(f"Scraping of {username} complete.")
     except Exception as e:
         logger.error(f"An error occurred: {e}")
     finally:
         if scraper:
             scraper._driver_quit()
 
-def multi_threaded_scrape(clubs:list[str], max_threads:int)-> None:
-    """Runs scrapper on multiple threads.
+def multi_threaded_scrape(clubs: list[str], max_threads: int) -> None:
+    """
+    Runs scraper on multiple threads, dividing clubs among threads.
 
     Args:
-        clubs (list): instagram usernames of club
-        max_threads (int): number of threads
+        clubs (list[str]): Instagram usernames of clubs.
+        max_threads (int): Number of threads to use.
     """
-    with ThreadPoolExecutor(max_threads) as executor:
-        logger.info("Scrapping clubs...")
-        executor.map(scrape_sequence, clubs)
+    club_chunks = chunk_list(clubs, max_threads)  # Divide the clubs list into chunks
+    logger.info(f"Divided {len(clubs)} clubs into {len(club_chunks)} chunks for {max_threads} threads.")
 
+    with ThreadPoolExecutor(max_threads) as executor:
+        futures = []
+        for chunk in club_chunks:
+            futures.append(executor.submit(scrape_sequence, chunk))
+
+        # Wait for all threads to complete
+        for future in futures:
+            try:
+                future.result()  # This raises any exception that occurred during task execution
+            except Exception as e:
+                logger.error(f"An error occurred in a thread: {e}")
 if __name__ == "__main__":
     # Set your Instagram credentials here
 
         dotenv.load_dotenv()
         starttime = time.time()
         
-        clubs = ['icssc.uci','productuci','uciblockchain','fusionatuci']
-        max_threads = 4
+        clubs = ['asuci_','ucirvine', 'icssc.uci', 'uciantrepreneur','poppinuci']
+        max_threads = 3
         multi_threaded_scrape(clubs, max_threads)
         elapsed_time = time.time() - starttime
         logger.info(f"Time elapsed: {elapsed_time}")

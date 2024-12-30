@@ -8,8 +8,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 import dotenv
 import os
-
+import sys
 dotenv.load_dotenv()
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.logger import logger
 
 calendar = CalendarConnection()
 retriever = DataRetriever()
@@ -72,18 +74,21 @@ def consolidate_clubs():
     
 
 def reload_data():
+    print("reloading")
+    logger.info("reloading started")
     parser = EventParser()
-    clubs = retriever.retrieve_club_list().keys()
+    clubs = ['icssc.uci', 'fusionatuci','productuci', 'accounting.uci','asuci_','ucirvine']
     multi_threaded_scrape(clubs,3)
     for club in clubs:
         parser.parse_all_posts(club)
         calendar.create_calendar_file(club)
    
 schedular = BackgroundScheduler(daemon=True)
-schedular.add_job(reload_data, 'interval', days=2)
+schedular.add_job(reload_data, 'interval', minutes=1)
 schedular.start()
 
 
     
 if __name__ == "__main__":
     app.run(debug=True, host='127.0.0.1', port=5022)  # Change 5000 to your desired porta
+    
