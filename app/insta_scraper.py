@@ -506,8 +506,8 @@ if __name__ == "__main__":
         dotenv.load_dotenv()
         starttime = time.time()
         
-        clubs = ['asuci_','ucirvine', 'icssc.uci', 'uciantrepreneur','poppinuci']
-        max_threads = 3
+        clubs = ['icssc.uci']
+        max_threads = 1
         multi_threaded_scrape(clubs, max_threads)
         elapsed_time = time.time() - starttime
         logger.info(f"Time elapsed: {elapsed_time}")

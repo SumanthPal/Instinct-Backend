@@ -49,10 +49,10 @@ class EventParser:
                     {
                         "role": "system",
                         "content": "I want you to parse a description and a context date to give me information on an event listed in it."
-                        "I want you to return the ISO date with time for a piece of text and what you think the estimated duration of the event is(if long, just put sign up)."
+                        "I want you to return the ISO date with time for a piece of text and what you think the estimated duration of the event is(if it is longer than a day, make an a event for start and end date. In this case duration should be 0)."
                         "There could be multiple dates and times listed, so if there are multiple, "
                         "I want all occurences. I will also give a context date in iso format, and if a "
-                        "day of the week is given, use the context date. Simply output a list of dictionaries in the format "
+                        "day of the week is given, use the context date. Simply output a list of dictionaries of events in the format "
                         "[{Name: \"What you think the event name is \", Date: \"iso date\", Details: \"what the event is with any links provided\", Duration: {\"estimated duration\" ex. \"days:\"...:, \"hours:\":...,}}...]. No duplicates, no newlines, no json starting."
                     },
                     {
@@ -60,7 +60,7 @@ class EventParser:
                         "content": f"{post_text} context date: {post_date}"
                     }
     ],
-    temperature=0.5  # Adjust the creativity level
+    temperature=0.3  # Adjust the creativity level
 ) 
 
             # Return parsed date results
@@ -107,7 +107,7 @@ class EventParser:
 if __name__ == "__main__":
     # Example usage
     parser = EventParser()
-    parser.parse_all_posts("fusionatuci")
+    parser.parse_all_posts("icssc.uci")
 
 
 

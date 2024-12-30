@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, abort
 
 from ai_validation import EventParser
 from calendar_connection import CalendarConnection
@@ -49,10 +49,18 @@ def club_post_data(username):
         return jsonify({"message": f"Error: {e}"}), 500
    
 
-@app.route("/club/<username>/calendar", methods=['GET'])
+@app.route("/club/<username>/calendar.ics", methods=['GET'])
 def club_calender(username):
-    calendar.create_calendar_file(username)
-    return send_file(calendar.get_ics_path(username), download_name=f"{username}_calendar.ics", as_attachment=True)
+    try:
+        calendar.create_calendar_file(username)
+        return send_file(calendar.get_ics_path(username), 
+                        download_name=f"{username}_calendar.ics", 
+                        as_attachment=False,
+                        mimetype='text/calendar',
+                        )
+    except Exception as e:
+        logger.error(f"Error generating or serving the .ics file for {username}: {str(e)}")
+        abort(500, description="Internal Server Error")
 
 @app.route("/club/consolidate", methods=['POST'])
 def consolidate_clubs():
@@ -110,12 +118,13 @@ scheduler = BackgroundScheduler(daemon=True)
 scheduler.add_job(
     reload_data,
     'interval',
-    minutes=1,
-    misfire_grace_time=30  # Skip missed executions if the job overlaps
+    days=2,
+    misfire_grace_time=1 # Skip missed executions if the job overlaps
 )
 
     
 if __name__ == "__main__":
+    
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         scheduler.start()
     app.run(debug=True, host='127.0.0.1', port=5022)  # Change 5000 to your desired porta
