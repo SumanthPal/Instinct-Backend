@@ -16,5 +16,6 @@ INSTAGRAM_USERNAME=
 INSTAGRAM_PASSWORD=
 ```
 4. Run `main.py` to test
+5. A server should be running on http://localhost:5022/
 
 
