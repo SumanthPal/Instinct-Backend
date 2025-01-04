@@ -7,7 +7,7 @@ activate
 ```
 2. Download dependencies
 ```shell
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 3. Create a `.env` file and put the following:
 ```txt
