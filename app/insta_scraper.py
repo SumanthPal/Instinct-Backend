@@ -16,6 +16,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
+from data_retriever import DataRetriever
 
 
 
@@ -143,6 +144,7 @@ class InstagramScraper:
             logger.error(f"Error fetching club info: {e}")
             self._driver_quit()
 
+    
     def get_post_info(self, post_url: str) -> tuple:
         """Main method to scrape post information."""
         description = ""
@@ -163,12 +165,16 @@ class InstagramScraper:
             # looks for post time
             post_time = post_soup.find('time', class_="_a9ze _a9zf")
             date = post_time['datetime']
-            logger.info("Successfully fetched post info!")
+            
+            # look for post pic
+            img_tag = post_soup.find('img', class_="x5yr21d xu96u03 x10l6tqk x13vifvy x87ps6o xh8yej3")
+            img_src = img_tag.get('src')
+            
         except WebDriverException as e:
             logger.error(f"Error fetching post info: {e}")
             self._driver_quit()
 
-        return description, date
+        return description, date, img_src
 
     def save_post_info(self, club_username: str):
         """Save the description and date of each post into a file"""
@@ -180,10 +186,15 @@ class InstagramScraper:
             os.makedirs(club_path)
 
         for post in post_links:
-            description, date = self.get_post_info(post)
+            description, date, post_pic = self.get_post_info(post)
             post_path = os.path.join(club_path, f"{date}.json")
-            with open(post_path, "w") as file:
-                json.dump({"Description": description, "Date": date}, file)
+            
+            if os.path.exists(post_path):
+                logger.info(f"This post path is already created: {post_path}")
+                continue
+            else:
+                with open(post_path, "w") as file:
+                    json.dump({"Description": description, "Date": date, "Picture": post_pic}, file)
 
     def save_club_info(self, club_info: json):
         """Save the club information into a file"""
@@ -221,13 +232,15 @@ class InstagramScraper:
             print(f"WebDriver error: {e}")
             return False
     def _handle_instagram_links_button(self):
+        #TODO: fix this shitter
         try:
             # Wait for the button to be present, but allow for a possible timeout
             # check if there is only one link:
             try:
                 link_element = self._wait.until(EC.presence_of_element_located(
                     (By.XPATH, "//a[@rel='me nofollow noopener noreferrer' and @target='_blank']")))
-                return [link_element.get_attribute('href')]
+                
+                return [{'text': link_element.get_attribute('text'), 'url':link_element.get_attribute('href')}]
             except TimeoutException:
                 pass
             self._wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button._acan._acao._acas._aj1-._ap30')))
@@ -242,8 +255,12 @@ class InstagramScraper:
             links = self._driver.find_elements(By.XPATH,
                                                "//a[@rel='me nofollow noopener noreferrer' and @target='_blank']")
             logger.info("Links found successfully.")
+            urls = []
+            for link in links:
+                text = link.text.strip().replace('Link icon', '').strip()
+                url = link.get_attribute('href')
+                urls.append({'text': text, 'url': url})
 
-            urls = [link.get_attribute('href') for link in links]
             logger.info("URLs extracted successfully.")
 
             close_button = self._driver.find_element(By.CSS_SELECTOR, 'div[aria-label="Close"]')
@@ -505,12 +522,8 @@ if __name__ == "__main__":
 
         dotenv.load_dotenv()
         starttime = time.time()
+        scrape_sequence(['icssc.uci'])
         
-        clubs = ['icssc.uci']
-        max_threads = 1
-        multi_threaded_scrape(clubs, max_threads)
-        elapsed_time = time.time() - starttime
-        logger.info(f"Time elapsed: {elapsed_time}")
             
         
         

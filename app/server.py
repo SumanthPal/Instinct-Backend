@@ -41,6 +41,7 @@ def club_data(username):
 
 @app.route("/club/<username>/posts", methods=['GET'])
 def club_post_data(username):
+
     try:
         return retriever.fetch_club_posts(username)
     except FileNotFoundError:
@@ -48,9 +49,14 @@ def club_post_data(username):
     except Exception as e:
         return jsonify({"message": f"Error: {e}"}), 500
    
+@app.route("/club-manifest", methods=['GET'])
+def club_manifest():
+    """club manifest features all clubs w/ relevant infromation"""
+    return retriever.fetch_manifest()
 
 @app.route("/club/<username>/calendar.ics", methods=['GET'])
 def club_calender(username):
+    """Route for getting the ics file for a club"""
     try:
         calendar.create_calendar_file(username)
         return send_file(calendar.get_ics_path(username), 
@@ -62,23 +68,27 @@ def club_calender(username):
         logger.error(f"Error generating or serving the .ics file for {username}: {str(e)}")
         abort(500, description="Internal Server Error")
 
-@app.route("/club/consolidate", methods=['POST'])
-def consolidate_clubs():
-    data = request.json
-    # Check if club is legit
-    club_name = data.get('name')
-    club_genre = data.get('genre')
+# @app.route("/club/consolidate", methods=['POST'])
+# def consolidate_clubs():
+#     data = request.json
+#     # Check if club is legit
+#     club_name = data.get('name')
+#     club_genre = data.get('genre')
     
-    if not club_name or not club_genre:
-        return jsonify({"message": "Invalid club data"}), 400
+#     if not club_name or not club_genre:
+#         return jsonify({"message": "Invalid club data"}), 400
     
-    existing_clubs = retriever.retrieve_club_list()
-    if club_name in existing_clubs:
-        return jsonify({"message": "Club already exists"}), 409
+#     existing_clubs = retriever.retrieve_club_list()
+#     if club_name in existing_clubs:
+#         return jsonify({"message": "Club already exists"}), 409
     
-    existing_clubs[club_name] = {'name': club_name, 'genre': club_genre}
+#     existing_clubs[club_name] = {'name': club_name, 'genre': club_genre}
     
-    return jsonify({"message": "Club successfully added"}), 201
+#     return jsonify({"message": "Club successfully added"}), 201
+
+
+
+        
     
 job_running = False
 job_lock = Lock()
@@ -97,7 +107,8 @@ def reload_data():
 
         # Simulated tasks
         parser = EventParser()
-        clubs = ['icssc.uci', 'fusionatuci', 'productuci', 'accounting.uci', 'asuci_', 'ucirvine']
+        clubs = retriever.fetch_club_instagram_from_manifest()
+            
         multi_threaded_scrape(clubs, 3)
 
         for club in clubs:

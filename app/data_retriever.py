@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 class DataRetriever:
     def __init__(self):
         self.working_path = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -46,7 +47,28 @@ class DataRetriever:
             posts_data.append(post_data)
             
         return posts_data
+    
+    def check_if_post_exists(self, post_name) -> bool:
+        return Path(post_name).exists()
+    
+    def fetch_manifest(self) -> json:
+        with open(os.path.join(self.working_path, 'manifest.json'), 'r') as f:
+            club_data = json.load(f)
             
+        return club_data
+
+    def fetch_club_instagram_from_manifest(self) -> list[str]:
+        clubs = []
+        for c in self.fetch_manifest():
+            clubs.append(c['instagram'])
+        
+        return clubs
+    
+if __name__ == "__main__":
+    retriver = DataRetriever();
+    print(retriver.fetch_club_instagram_from_manifest())
+        
+        
 
             
         
