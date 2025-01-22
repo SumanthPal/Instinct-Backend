@@ -20,7 +20,7 @@ from utils.logger import logger
 calendar = CalendarConnection()
 retriever = DataRetriever()
 app = Flask(__name__)
-CORS(app, origins=["http://www.google.com"])  # Replace with your frontend URL
+#CORS(app, origins=["http://www.google.com"])  # Replace with your frontend URL
 
 # Initialize the scheduler with a SQLAlchemy job store
 jobstores = {
@@ -117,7 +117,7 @@ atexit.register(lambda: scheduler.shutdown())
 
 @app.route('/')
 def home():
-    print("Hello, World!")
+    logger.info("Hello, World!")
     return jsonify({"message": "Hello, World!"})
 
 @app.route("/club", methods=['POST'])
@@ -126,7 +126,7 @@ def club():
 
 @app.route("/club/<username>", methods=['GET'])
 def club_data(username):
-    print("Fetching", username)
+    logger.info("Fetching", username)
     try:
         return retriever.fetch_club_info(username)
     except FileNotFoundError:

@@ -4,6 +4,9 @@ import datetime
 import os
 from ics import Calendar, Event
 from data_retriever import DataRetriever
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.logger import logger
 
 class CalendarConnection:
     def __init__(self):
@@ -25,31 +28,35 @@ class CalendarConnection:
 
             # Add events to the calendar
             for post in posts:
-                for event in post['Parsed']:
-                    try:
-                        new_event = Event()
-                        new_event.name = event['Name']
-                        new_event.begin = event['Date']  # Ensure this is in ISO 8601 or datetime format
-                        duration = event['Duration']['estimated duration']
-                        
-                        # Add duration if provided
-                        if 'days' in duration or 'hours' in duration:
-                            days = duration.get('days', 0)
-                            hours = duration.get('hours', 0)
-                            total_seconds = (days * 86400) + (hours * 3600)
-                            new_event.duration = datetime.timedelta(seconds=total_seconds)
-                        
-                        # Check for duplicates and add the event
-                        if not self.is_duplicate(new_event):
-                            self.calendar.events.add(new_event)
-                    except Exception as e:
-                        print(f"Error while adding event: {e}")
+                try:
+                    for event in post['Parsed']:
+                        try:
+                            new_event = Event()
+                            new_event.name = event['Name']
+                            new_event.begin = event['Date']  # Ensure this is in ISO 8601 or datetime format
+                            duration = event['Duration']['estimated duration']
+                            
+                            # Add duration if provided
+                            if 'days' in duration or 'hours' in duration:
+                                days = duration.get('days', 0)
+                                hours = duration.get('hours', 0)
+                                total_seconds = (days * 86400) + (hours * 3600)
+                                new_event.duration = datetime.timedelta(seconds=total_seconds)
+                            
+                            # Check for duplicates and add the event
+                            if not self.is_duplicate(new_event):
+                                self.calendar.events.add(new_event)
+                        except Exception as e:
+                            logger.error(f"Error while adding event: {e} for {username}")
+                except KeyError:
+                    continue
+                    
 
             # Save the updated calendar to the .ics file
             with open(ics_path, 'w') as f:
                 f.writelines(self.calendar)
 
-            print("Calendar file successfully created/updated.")
+            logger.info(f"Calendar file successfully created/updated for {username}")
         
  
     

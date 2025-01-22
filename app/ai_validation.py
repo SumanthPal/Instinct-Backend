@@ -5,7 +5,9 @@ from openai import OpenAI
 import json
 from typing import List, Dict
 import time
-
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.logger import logger
 
 class EventParser:
     def __init__(self):
@@ -55,7 +57,7 @@ class EventParser:
             # Retry mechanism for API calls
             for attempt in range(MAX_RETRIES):
                 try:
-                    print(f"Parsing attempt {attempt + 1}...")
+                    logger.info(f"Parsing attempt {attempt + 1}...")
 
                     # Send request to OpenAI API to extract dates
                     completion = self.client.chat.completions.create(
@@ -67,10 +69,10 @@ class EventParser:
                                         "You must strictly adhere to the following rules:\n"
     "1. Always respond in JSON format and ensure it is valid JSON. Do not include any extra text, markdown, or formatting outside of JSON.\n"
     "2. The response must not include any commentary, explanation, or additional notes.\n"
-    "3. If the input cannot be parsed, return an empty JSON array: [].\n"
-    "4. The JSON must be formatted as a list of dictionaries like this example:\n"
+    "3. If the input cannot be parsed, or the input is not a club event, return an empty JSON array: [].\n"
+    "3. The JSON must be formatted as a list of dictionaries like this example:\n"
     "[{\"Name\": \"Event Name\", \"Date\": \"ISO date\", \"Details\": \"Event details\", \"Duration\": {\"estimated duration\": {\"days\": 0, \"hours\": 0}}}]\n"
-    "5. If the event spans multiple dates, create one entry for the start date and another for the end date, each with a duration of 0."
+    "4. If the event spans multiple dates, create one entry for the start date and another for the end date, each with a duration of 0."
 
                                 )
                             },
@@ -88,30 +90,30 @@ class EventParser:
 
                     # Check if the response format is valid
                     if isinstance(events, list) and all(isinstance(event, dict) for event in events):
-                        print("Successful parse.")
+                        logger.info("Successful parse.")
                         return events
 
                     raise ValueError("Invalid API response format")
 
                 except json.JSONDecodeError as e:
-                    print(response)
-                    print(f"JSON decoding error: {e}")
+                    logger.error(response)
+                    logger.error(f"JSON decoding error: {e}")
                 except Exception as e:
-                    print(f"Error during API call: {e}")
+                    logger.error(f"Error during API call: {e}")
 
                 if attempt < MAX_RETRIES - 1:
-                    print(f"Retrying in {RETRY_DELAY} seconds...")
+                    logger.warning(f"Retrying in {RETRY_DELAY} seconds...")
                     time.sleep(RETRY_DELAY)
 
             # If retries fail, log and return an empty list
-            print("Failed to parse post after multiple attempts.")
+            logger.error("Failed to parse post after multiple attempts.")
             return []
 
         except (FileNotFoundError, KeyError) as e:
-            print(f"Error loading post data: {e}")
+            logger.error(f"Error loading post data: {e}")
             return []
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            logger.error(f"Unexpected error: {e}")
             return []
 
     def parse_all_posts(self, username):
@@ -126,13 +128,15 @@ class EventParser:
             with open(post_path, 'r') as file:
                 post_data = json.load(file)
             if  parsed_info == []:
+                post_data['Parsed'] = []
+                logger.info(f"{post_path} is empty; parsed will be empty.")
                 return
             post_data['Parsed'] = parsed_info
             with open(post_path, 'w') as file:
-                print(f"Successfully stored {post_path}")
+                logger.info(f"Successfully stored {post_path}")
                 json.dump(post_data, file)
         except Exception as e:
-            print(f"Error while storing parsed info: {e}\n response: {post_data}")
+            logger.error(f"Error while storing parsed info: {e}\n response: {post_data}")
             
 
     def is_parsed(self, post_path: str):
@@ -149,7 +153,7 @@ if __name__ == "__main__":
     # Example usage
     parser = EventParser()
     
-    parser.parse_all_posts("vevocalists")
+    parser.parse_all_posts("akpsiuci")
   
 
     

@@ -30,9 +30,9 @@ class InstagramScraper:
         self._add_options(options)
 
         # Initialize WebDriver with options
-        print("initing driver")
+        logger.info("initing driver")
         self._driver = webdriver.Chrome(options=options)
-        print("driver inited")
+        logger.info("driver inited")
         self._wait = WebDriverWait(self._driver, 3)
         
     def __enter__(self):
@@ -93,7 +93,7 @@ class InstagramScraper:
             self.save_post_info(club_username)
             return True
         except AttributeError as e:
-            logger.error("Enter a valid username")
+            logger.error(f"Enter a valid username {club_username}")
             return False
         except Exception as e:
             logger.error(f"Scraping failed: {e}", exc_info=True)
@@ -229,7 +229,7 @@ class InstagramScraper:
 
         except WebDriverException as e:
             # Handle other driver-related errors
-            print(f"WebDriver error: {e}")
+            logger.info(f"WebDriver error: {e}")
             return False
     def _handle_instagram_links_button(self):
         #TODO: fix this shitter
@@ -386,7 +386,28 @@ class InstagramScraper:
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-           # "--headless",  # Run in headless mode for better speed
+            "--headless",  # Run in headless mode for better speed
+            "--disable-software-rasterizer",
+            "--disable-background-networking",
+            "--disable-background-timer-throttling",
+            "--disable-backgrounding-occluded-windows",
+            "--disable-breakpad",
+            "--disable-client-side-phishing-detection",
+            "--disable-component-update",
+            "--disable-default-apps",
+            "--disable-domain-reliability",
+            "--disable-features=AudioServiceOutOfProcess",
+            "--disable-hang-monitor",
+            "--disable-ipc-flooding-protection",
+            "--disable-renderer-backgrounding",
+            "--disable-sync",
+            "--force-color-profile=srgb",
+            "--metrics-recording-only",
+            "--safebrowsing-disable-auto-update",
+            "--enable-automation",
+            "--password-store=basic",
+            "--use-mock-keychain",
+            "--blink-settings=imagesEnabled=false",
         ]
         for arg in args:
             option.add_argument(arg)
@@ -523,6 +544,7 @@ if __name__ == "__main__":
         dotenv.load_dotenv()
         starttime = time.time()
         scrape_sequence(['phialphadelta'])
+        logger.info(f"total time: {time.time - starttime}")
         
             
         
