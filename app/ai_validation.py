@@ -64,14 +64,14 @@ class EventParser:
                             {
                                 "role": "system",
                                 "content": (
-                                    "I want you to parse a description and a context date to give me information on an event listed in it."
-                                    "I want you to return the ISO date with time for a piece of text and what you think the estimated duration of the event is "
-                                    "(if it is longer than a day, make an event for start and end date. In this case, duration should be 0). "
-                                    "There could be multiple dates and times listed, so if there are multiple, "
-                                    "I want all occurrences. I will also give a context date in ISO format, and if a "
-                                    "day of the week is given, use the context date. Simply output a list of dictionaries of events in the format "
-                                    "[{Name: 'What you think the event name is', Date: 'ISO date', Details: 'What the event is with any links provided', "
-                                    "Duration: {'estimated duration': {'days': ..., 'hours': ...}}}] with no duplicates. Make sure its in no other file format other than JSON and that the file is not in markdown."
+                                        "You must strictly adhere to the following rules:\n"
+    "1. Always respond in JSON format and ensure it is valid JSON. Do not include any extra text, markdown, or formatting outside of JSON.\n"
+    "2. The response must not include any commentary, explanation, or additional notes.\n"
+    "3. If the input cannot be parsed, return an empty JSON array: [].\n"
+    "4. The JSON must be formatted as a list of dictionaries like this example:\n"
+    "[{\"Name\": \"Event Name\", \"Date\": \"ISO date\", \"Details\": \"Event details\", \"Duration\": {\"estimated duration\": {\"days\": 0, \"hours\": 0}}}]\n"
+    "5. If the event spans multiple dates, create one entry for the start date and another for the end date, each with a duration of 0."
+
                                 )
                             },
                             {
@@ -129,10 +129,10 @@ class EventParser:
                 return
             post_data['Parsed'] = parsed_info
             with open(post_path, 'w') as file:
-                print("Successfully stored")
+                print(f"Successfully stored {post_path}")
                 json.dump(post_data, file)
         except Exception as e:
-            print(f"Error while storing parsed info: {e}")
+            print(f"Error while storing parsed info: {e}\n response: {post_data}")
             
 
     def is_parsed(self, post_path: str):
@@ -149,8 +149,8 @@ if __name__ == "__main__":
     # Example usage
     parser = EventParser()
     
-    parser.parse_all_posts("toastr_petr")
-    parser.parse_all_posts("baddie_petr")
+    parser.parse_all_posts("vevocalists")
+  
 
     
 

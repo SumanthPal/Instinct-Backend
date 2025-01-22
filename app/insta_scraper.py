@@ -522,7 +522,7 @@ if __name__ == "__main__":
 
         dotenv.load_dotenv()
         starttime = time.time()
-        scrape_sequence(['icssc.uci'])
+        scrape_sequence(['phialphadelta'])
         
             
         

@@ -78,6 +78,6 @@ class CalendarConnection:
 
 if __name__ == "__main__":
     calendar = CalendarConnection()
-    calendar.create_calendar_file("icssc.uci")
+    calendar.create_calendar_file("phialphadelta")
     
     
