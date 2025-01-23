@@ -35,18 +35,15 @@ class InstagramScraper:
         logger.info("driver inited")
         self._wait = WebDriverWait(self._driver, 3)
         
-    def _create_driver(self, options):
-        """Create and return a WebDriver instance."""
-        # Set the path to ChromeDriver
-        chrome_driver_path = "/app/.chromedriver/bin/chromedriver"
-        service = Service(chrome_driver_path)
-
-        # Set the path to Chrome binary (if using a prebuilt binary)
-        chrome_binary_path = "/app/.apt/usr/bin/google-chrome"
-        options.binary_location = chrome_binary_path
-
+        
+    
+    def _create_driver(self, chrome_options):
         # Initialize WebDriver
-        return webdriver.Chrome(service=service, options=options)
+        service = Service()
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+        
+        return driver
+    
     def __enter__(self):
         return self
 
