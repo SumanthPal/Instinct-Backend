@@ -117,11 +117,14 @@ class EventParser:
             return []
 
     def parse_all_posts(self, username):
-        _, post_dir = self.validate_username(username)
-        for post in os.listdir(post_dir):
-            post_path = os.path.join(post_dir, post)
-            parsed_info = self.parse_post(post_path)
-            self.store_parsed_info(post_path, parsed_info)
+        try:
+            _, post_dir = self.validate_username(username)
+            for post in os.listdir(post_dir):
+                post_path = os.path.join(post_dir, post)
+                parsed_info = self.parse_post(post_path)
+                self.store_parsed_info(post_path, parsed_info)
+        except Exception as e:
+            logger.error(f"Unexpected Error: {e}")
 
     def store_parsed_info(self, post_path: str, parsed_info: list):
         try:
@@ -136,7 +139,7 @@ class EventParser:
                 logger.info(f"Successfully stored {post_path}")
                 json.dump(post_data, file)
         except Exception as e:
-            logger.error(f"Error while storing parsed info: {e}\n response: {post_data}")
+            logger.warning(f"Error while storing parsed info: {e}\n response: {post_data}")
             
 
     def is_parsed(self, post_path: str):

@@ -174,20 +174,22 @@ def job_status():
 def club_manifest():
     """club manifest features all clubs w/ relevant information"""
     return retriever.fetch_manifest()
-
 @app.route("/club/<username>/calendar.ics", methods=['GET'])
-def club_calender(username):
+def club_calendar(username):
     """Route for getting the ics file for a club"""
     try:
+        # Generate the .ics file
         calendar.create_calendar_file(username)
-        return send_file(calendar.get_ics_path(username), 
-                        download_name=f"{username}_calendar.ics", 
-                        as_attachment=False,
-                        mimetype='text/calendar',
-                        )
+        
+        # Serve the .ics file with the correct MIME type
+        return send_file(
+            calendar.get_ics_path(username),
+            download_name=f"{username}_calendar.ics",
+            as_attachment=False,
+            mimetype='text/calendar',
+        )
     except Exception as e:
         logger.error(f"Error generating or serving the .ics file for {username}: {str(e)}")
         abort(500, description="Internal Server Error")
-
 if __name__ == "__main__":
-    app.run(debug=True, host='127.0.0.1', port=5022)  # Change 5000 to your desired port
+    app.run(debug=True, host='127.0.0.1', port=5022)  

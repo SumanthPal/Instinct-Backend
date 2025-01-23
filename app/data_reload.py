@@ -17,7 +17,7 @@ def main():
     logger.info("objects have been initiated")
     
     logger.info("initiating scraping with 3 threads")
-    multi_threaded_scrape(clubs, 3)
+    #multi_threaded_scrape(clubs, 3)
     logger.info('successful scrape!')
     
     logger.info("initiating ai and calendar file creation")
