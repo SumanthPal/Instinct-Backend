@@ -138,8 +138,8 @@ def club_data(username):
 def club_post_data(username):
     try:
         return retriever.fetch_club_posts(username)
-    except FileNotFoundError:
-        return jsonify({"message": "Club not found"}), 404 
+    except FileNotFoundError as e:
+        return jsonify({f"message": f"Club not found {e.filename}", }), 404 
     except Exception as e:
         return jsonify({"message": f"Error: {e}"}), 500
 @app.route("/job-status", methods=['GET'])

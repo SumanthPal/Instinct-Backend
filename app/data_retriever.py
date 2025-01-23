@@ -3,10 +3,10 @@ import json
 from pathlib import Path
 class DataRetriever:
     def __init__(self):
-        self.working_path = os.path.join(os.path.dirname(__file__))
+        self.working_path = os.path.join(os.path.dirname(__file__), '..')
 
     def get_user_dir(self):
-        return self.working_path
+        return os.path.join(self.working_path, 'data')
     
     def club_data_exists(self, club_name):
         return os.path.exists(os.path.join(self.working_path, 'data', club_name)) and os.path.exists(os.path.join(self.working_path, 'data', club_name, "posts"))
@@ -32,7 +32,7 @@ class DataRetriever:
         
         posts_data = []
         for post in os.listdir(os.path.join(self.working_path, 'data', club_name, "posts")):
-            with open(os.path.join(self.working_path, club_name, "posts", post), 'r') as file:
+            with open(os.path.join(self.working_path, 'data', club_name, "posts", post), 'r') as file:
                 post_data = json.load(file)
             
             posts_data.append(post_data)
