@@ -31,10 +31,22 @@ class InstagramScraper:
 
         # Initialize WebDriver with options
         logger.info("initing driver")
-        self._driver = webdriver.Chrome(options=options)
+        self._driver = self._create_driver(options)
         logger.info("driver inited")
         self._wait = WebDriverWait(self._driver, 3)
         
+    def _create_driver(self, options):
+        """Create and return a WebDriver instance."""
+        # Set the path to ChromeDriver
+        chrome_driver_path = "/app/.chromedriver/bin/chromedriver"
+        service = Service(chrome_driver_path)
+
+        # Set the path to Chrome binary (if using a prebuilt binary)
+        chrome_binary_path = "/app/.apt/usr/bin/google-chrome"
+        options.binary_location = chrome_binary_path
+
+        # Initialize WebDriver
+        return webdriver.Chrome(service=service, options=options)
     def __enter__(self):
         return self
 
@@ -544,7 +556,6 @@ if __name__ == "__main__":
         dotenv.load_dotenv()
         starttime = time.time()
         scrape_sequence(['phialphadelta'])
-        logger.info(f"total time: {time.time - starttime}")
         
             
         
