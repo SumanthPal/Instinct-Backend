@@ -52,7 +52,7 @@ class DataRetriever:
         return Path(post_name).exists()
     
     def fetch_manifest(self) -> json:
-        with open(os.path.join(self.working_path, 'manifest.json'), 'r') as f:
+        with open(os.path.join(self.working_path, '..', 'manifest.json'), 'r') as f:
             club_data = json.load(f)
             
         return club_data

@@ -1,0 +1,323 @@
+[
+    {
+        "name": "ICS Student Council",
+        "genre": "Career and Professional",
+        "instagram": "icssc.uci",
+        "categories": [
+            "Career and Professional",
+            "Academics and Honors"
+        ]
+    },
+    {
+        "name": "Hack at UCI",
+        "genre": "Career and Professional",
+        "instagram": "hackatuci",
+        "categories": [
+            "Career and Professional",
+            "Technology"
+        ]
+    },
+    {
+        "name": "MAISS",
+        "genre": "Cultural and Social",
+        "instagram": "maissuci",
+        "categories": [
+            "Cultural and Social",
+            "Academics and Honors"
+        ]
+    },
+    {
+        "name": "WICS",
+        "genre": "Career and Professional",
+        "instagram": "wicsuci",
+        "categories": [
+            "Career and Professional",
+            "Diversity and Inclusion"
+        ]
+    },
+    {
+        "name": "Artificial Intelligence at UCI",
+        "genre": "Career and Professional",
+        "instagram": "aiatuci",
+        "categories": [
+            "Career and Professional",
+            "Academics and Honors"
+        ]
+    },
+    {
+        "name": "Cyber @ UCI",
+        "genre": "Career and Professional",
+        "instagram": "cyberuci",
+        "categories": [
+            "Career and Professional",
+            "Technology"
+        ]
+    },
+    {
+        "name": "ACM @ UCI",
+        "genre": "Career and Professional",
+        "instagram": "acm.uci",
+        "categories": [
+            "Career and Professional",
+            "Technology"
+        ]
+    },
+    {
+        "name": "Commit the Change",
+        "genre": "Career and Professional",
+        "instagram": "ctc.uci",
+        "categories": [
+            "Community Service",
+            "Career and Professional"
+        ]
+    },
+    {
+        "name": "Ascend at UCI",
+        "genre": "Career and Professional",
+        "instagram": "ascenduci",
+        "categories": [
+            "Career and Professional"
+        ]
+    },
+    {
+        "name": "Asian American Christian Fellowship at UCI - AACF",
+        "genre": "Religious and Spiritual",
+        "instagram": "aacf.uci",
+        "categories": [
+            "Religious and Spiritual"
+        ]
+    },
+    {
+        "name": "Asian Pacific American Law Student Association (APALSA)",
+        "genre": "Multicultural",
+        "instagram": "apalsa_ucilaw",
+        "categories": [
+            "Multicultural"
+        ]
+    },
+    {
+        "name": "Badminton Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "ucibadminton",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Anteater Financial Analytics Club",
+        "genre": "Career and Professional",
+        "instagram": "ufa_uci",
+        "categories": [
+            "Career and Professional",
+            "Hobbies and Interests"
+        ]
+    },
+    {
+        "name": "Anime Club at UCI",
+        "genre": "Hobbies and Interests",
+        "instagram": "anime.uci",
+        "categories": [
+            "Hobbies and Interests"
+        ]
+    },
+    {
+        "name": "Alpha Kappa Psi",
+        "genre": "Career and Professional",
+        "instagram": "akpsiuci",
+        "categories": [
+            "Career and Professional"
+        ]
+    },
+    {
+        "name": "Blockchain at UCI",
+        "genre": "Hobbies and Interests",
+        "instagram": "uciblockchain",
+        "categories": [
+            "Hobbies and Interests"
+        ]
+    },
+    {
+        "name": "Climbing Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "climbinguci",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Club Baseball at UCI",
+        "genre": "Club Sports",
+        "instagram": "ucibsb",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Brazilian Jiu Jitsu Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "ucibjj",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Boxing Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "boxingclubuci",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Accounting Association",
+        "genre": "Career and Professional",
+        "instagram": "accounting.uci",
+        "categories": [
+            "Career and Professional",
+            "Academics and Honors"
+        ]
+    },
+    {
+        "name": "Black Student Union",
+        "genre": "Multicultural",
+        "instagram": "uci_bsu",
+        "categories": [
+            "Multicultural"
+        ]
+    },
+    {
+        "name": "Cine-Collective",
+        "genre": "Creative Arts",
+        "instagram": "ucifms",
+        "categories": [
+            "Creative Arts",
+            "Media",
+            "Hobbies and Interests",
+            "Performance and Entertainment"
+        ]
+    },
+    {
+        "name": "Dragon Boat at UC Irvine",
+        "genre": "Club Sports",
+        "instagram": "ucidragonboat",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Engineers Without Borders at UCI",
+        "genre": "Community Service",
+        "instagram": "ewb.uci",
+        "categories": [
+            "Community Service",
+            "Environmental",
+            "Career and Professional",
+            "International"
+        ]
+    },
+    {
+        "name": "Fencing Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "fencingclubatuci",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Ice Hockey Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "ucihockey",
+        "categories": [
+            "Club Sports"
+        ]
+    },
+    {
+        "name": "Japanese Student Association",
+        "genre": "Multicultural",
+        "instagram": "uci.jsa",
+        "categories": [
+            "Multicultural",
+            "Cultural"
+        ]
+    },
+    {
+        "name": "Kendo Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "kendoclubatuci",
+        "categories": [
+            "Club Sports",
+            "Cultural"
+        ]
+    },
+    {
+        "name": "Latinx Law Student Association",
+        "genre": "Career and Professional",
+        "instagram": "ucilaw",
+        "categories": [
+            "Career and Professional",
+            "Multicultural"
+        ]
+    },
+    {
+        "name": "Mock Trial",
+        "genre": "Career and Professional",
+        "instagram": "anteatermocktrial",
+        "categories": [
+            "Career and Professional",
+            "Academics and Honors"
+        ]
+    },
+    {
+        "name": "Nigerian Student Association",
+        "genre": "Multicultural",
+        "instagram": "nsa.uci",
+        "categories": [
+            "Multicultural",
+            "Cultural"
+        ]
+    },
+    {
+        "name": "OutLaw at UCI Law",
+        "genre": "LGBTQ+",
+        "instagram": "outlaw_uci",
+        "categories": [
+            "LGBTQ+",
+            "Career and Professional"
+        ]
+    },
+    {
+        "name": "Pickleball at UCI",
+        "genre": "Club Sports",
+        "instagram": "pickleballatuci",
+        "categories": [
+            "Club Sports",
+            "Fitness"
+        ]
+    },
+    {
+        "name": "Queer & Asian at UCI",
+        "genre": "LGBTQ+",
+        "instagram": "mskristinawong",
+        "categories": [
+            "LGBTQ+",
+            "Multicultural"
+        ]
+    },
+    {
+        "name": "Running Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "runningclubatuci",
+        "categories": [
+            "Club Sports",
+            "Fitness"
+        ]
+    },
+    {
+        "name": "Sailing Club at UCI",
+        "genre": "Club Sports",
+        "instagram": "ucisailing",
+        "categories": [
+            "Club Sports"
+        ]
+    }
+]
