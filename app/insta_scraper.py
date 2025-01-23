@@ -17,6 +17,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
 from data_retriever import DataRetriever
+import chromedriver_binary  # This automatically sets up ChromeDriver
 
 
 
