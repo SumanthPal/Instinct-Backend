@@ -6,6 +6,7 @@ import re
 import time
 import sys
 import dotenv
+import base64
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException, NoSuchElementException, TimeoutException
@@ -58,11 +59,20 @@ class InstagramScraper:
         """
         try:
             cookies_path = os.path.join(os.path.dirname(__file__), "..", "auth", 'cookies.json')
-            if os.path.exists(cookies_path):
+            
+            cookies_str = os.getenv('COOKIE')
+            
+            if cookies_str:
                 self._driver.delete_all_cookies()
-                logger.info("Cookies file found. Loading cookies...")
+                logger.info("Cookies found. Loading...")
                 self._driver.get("https://www.instagram.com/")
-                self._load_cookies(cookies_path)
+                # self._load_cookies(cookies_path)
+                decoded_cookies = base64.b64decode(cookies_str)
+                cookies = decoded_cookies.decode('utf-8')
+                
+                for cookie in json.loads(cookies):
+                    self._driver.add_cookie(cookie)
+                
                 logger.info("Cookies loaded.")
                 self._driver.refresh()
             else:
@@ -396,7 +406,7 @@ class InstagramScraper:
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-            "--headless",  # Run in headless mode for better speed
+            #"--headless",  # Run in headless mode for better speed
             "--disable-software-rasterizer",
             "--disable-background-networking",
             "--disable-background-timer-throttling",
@@ -460,7 +470,16 @@ class InstagramScraper:
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Save info')]")))
             save_button.click()
             logger.info(self._driver.get_cookies())
-            with open("../auth/cookies.json", "w") as file:
+
+            # Define the directory and file path
+            cookies_dir = "/tmp/auth"
+            cookies_file = os.path.join(cookies_dir, "cookies.json")
+
+            # Create the directory if it doesn't exist
+            os.makedirs(cookies_dir, exist_ok=True)
+
+            # Save cookies to the file
+            with open(cookies_file, "w") as file:
                 json.dump(self._driver.get_cookies(), file)
                 logger.info("Cookies saved.")
         except Exception as e:
