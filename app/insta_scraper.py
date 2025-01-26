@@ -35,13 +35,13 @@ class InstagramScraper:
         logger.info("initing driver")
         self._driver = self._create_driver(options)
         logger.info("driver inited")
-        self._wait = WebDriverWait(self._driver, 3)
+        self._wait = WebDriverWait(self._driver, 7)
         
         
     
     def _create_driver(self, chrome_options):
         # Initialize WebDriver
-        service = Service('/app/.chrome-for-testing/chromedriver-linux64/chromedriver')
+        service = Service()
         driver = webdriver.Chrome(service=service, options=chrome_options)
         
         return driver

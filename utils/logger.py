@@ -15,10 +15,11 @@ log_file_path = os.path.join(log_file_dir, 'logfile.log')
 
 # Create a TimedRotatingFileHandler to rotate logs daily
 handler = TimedRotatingFileHandler(log_file_path, when="midnight", interval=1, backupCount=7)  # Keep logs for the last 7 days
+
 handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
 # Configure the root logger with the handler and the log level
-logging.basicConfig(level=logging.INFO, handlers=[handler])
+logging.basicConfig(level=logging.INFO, handlers=[handler, logging.StreamHandler()])
 
 # Create a logger object
 logger = logging.getLogger(__name__)
