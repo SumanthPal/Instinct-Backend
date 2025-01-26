@@ -18,7 +18,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
 from data_retriever import DataRetriever
-import chromedriver_binary  # This automatically sets up ChromeDriver
+#import chromedriver_binary  # This automatically sets up ChromeDriver
 
 
 
@@ -406,7 +406,7 @@ class InstagramScraper:
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-            "--headless",  # Run in headless mode for better speed
+            #"--headless",  # Run in headless mode for better speed
             "--disable-software-rasterizer",
             "--disable-background-networking",
             "--disable-background-timer-throttling",
