@@ -3,7 +3,9 @@ import json
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 import dotenv
-
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.logger import logger
 class DataRetriever:
     def __init__(self):
         dotenv.load_dotenv()
@@ -14,6 +16,13 @@ class DataRetriever:
             aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
             region_name=os.getenv('AWS_REGION', 'us-west-1')
         )
+        logger.info("Initializing S3 client...")
+        logger.info(f"AWS_ACCESS_KEY_ID: {os.getenv('AWS_ACCESS_KEY_ID')}")
+        logger.info(f"AWS_SECRET_ACCESS_KEY: {os.getenv('AWS_SECRET_ACCESS_KEY')}")
+        logger.info(f"AWS_REGION: {os.getenv('AWS_REGION')}")
+        logger.info(f"S3_BUCKET_NAME: {os.getenv('S3_BUCKET_NAME')}")
+        
+                
         self.bucket_name = os.getenv('S3_BUCKET_NAME', 'instinct-club-data')
         self.working_path = os.path.join(os.path.dirname(__file__), '..')
 
@@ -44,10 +53,27 @@ class DataRetriever:
             # Fetch club_info.json from S3
             response = self.s3.get_object(Bucket=self.bucket_name, Key=f"data/{club_name}/club_info.json")
             club_data = json.loads(response['Body'].read().decode('utf-8'))
+           
             return club_data
         except ClientError as e:
             raise FileNotFoundError(f"Failed to fetch club info for {club_name}: {e}")
 
+    def fetch_club_calendar(self, club_name):
+        """Fetch ics file for a club in S3"""
+        try:
+            # Construct the S3 key for the .ics file
+            ics_key = f"data/{club_name}/calendar_file.ics"
+
+            # Fetch the .ics file from S3
+            response = self.s3.get_object(Bucket=self.bucket_name, Key=ics_key)
+            ics_content = response['Body'].read()  # Read as bytes, not decode to string
+
+            return ics_content
+        except ClientError as e:
+            if e.response['Error']['Code'] == 'NoSuchKey':
+                raise FileNotFoundError(f".ics file 'data/{club_name}/calendar_file.ics' not found for club '{club_name}'")
+            else:
+                raise Exception(f"Failed to fetch .ics file for {club_name}: {e}")
     def fetch_club_posts(self, club_name):
         """
         Fetch all posts for a club from S3.

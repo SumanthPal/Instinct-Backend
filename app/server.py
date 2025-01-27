@@ -1,3 +1,4 @@
+from io import BytesIO, StringIO
 from flask import Flask, request, jsonify, send_file, abort
 from ai_validation import EventParser
 from calendar_connection import CalendarConnection
@@ -140,16 +141,27 @@ def club_manifest():
 @app.route("/club/<username>/calendar.ics", methods=['GET'])
 def club_calendar(username):
     try:
-        logger.info(f"Generating calendar for club: {username}")
-        calendar.create_calendar_file(username)
+        logger.info(f"Fetching calendar for club: {username}")
+        ics_content = retriever.fetch_club_calendar(username)
+        ics_file = BytesIO(ics_content)
         return send_file(
-            calendar.get_ics_path(username),
-            download_name=f"{username}_calendar.ics",
-            as_attachment=False,
-            mimetype='text/calendar',
+            ics_file,  # File-like object containing the .ics content
+            download_name=f"{username}_calendar.ics",  # Name of the file when downloaded
+            as_attachment=False,  # Set to True if you want to force download
+            mimetype='text/calendar',  # MIME type for .ics files
         )
+        # calendar.create_calendar_file(username)
+        # return send_file(
+        #     calendar.get_ics_path(username),
+        #     download_name=f"{username}_calendar.ics",
+        #     as_attachment=False,
+        #     mimetype='text/calendar',
+        # )
+    except FileNotFoundError as e:
+        logger.error(f"Calendar file not found for {username}: {e}")
+        abort(404, description="Calendar file not found")
     except Exception as e:
-        logger.error(f"Error generating calendar for {username}: {e}")
+        logger.error(f"Error fetching calendar for {username}: {e}")
         abort(500, description="Internal Server Error")
 
 
