@@ -38,7 +38,8 @@ class InstagramScraper:
         self.s3 = boto3.client(
             's3',
             aws_access_key_id=os.getenv('AWS_ACCESS_KEY'),
-            aws_secret_access_key=os.getenv('AWS_PRIVATE_KEY')
+            aws_secret_access_key=os.getenv('AWS_PRIVATE_KEY'),
+            region_name=os.getenv('AWS_REGION', 'us-west-1')
         )
         self.bucket_name = os.getenv('S3_BUCKET_NAME')
 

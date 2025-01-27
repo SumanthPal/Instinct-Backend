@@ -62,7 +62,7 @@ class DataRetriever:
         """Fetch ics file for a club in S3"""
         try:
             # Construct the S3 key for the .ics file
-            ics_key = f"data/{club_name}/calendar_file.ics"
+            ics_key = f"data/club/{club_name}/calendar_file.ics"
 
             # Fetch the .ics file from S3
             response = self.s3.get_object(Bucket=self.bucket_name, Key=ics_key)
@@ -71,7 +71,7 @@ class DataRetriever:
             return ics_content
         except ClientError as e:
             if e.response['Error']['Code'] == 'NoSuchKey':
-                raise FileNotFoundError(f".ics file 'data/{club_name}/calendar_file.ics' not found for club '{club_name}'")
+                raise FileNotFoundError(f".ics file 'data/club/{club_name}/calendar_file.ics' not found for club '{club_name}'")
             else:
                 raise Exception(f"Failed to fetch .ics file for {club_name}: {e}")
     def fetch_club_posts(self, club_name):
