@@ -17,6 +17,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.logger import logger
+import dropbox 
+from dropbox.exceptions import ApiError
+from dropbox.files import WriteMode
+import boto3
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
+
+
 from data_retriever import DataRetriever
 #import chromedriver_binary  # This automatically sets up ChromeDriver
 
@@ -27,6 +34,13 @@ class InstagramScraper:
         self._username = username
         self._password = password
         self._current_page = "none"
+        self.dbx = dropbox.Dropbox(os.getenv("DROPBOX_API_KEY"))
+        self.s3 = boto3.client(
+            's3',
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY'),
+            aws_secret_access_key=os.getenv('AWS_PRIVATE_KEY')
+        )
+        self.bucket_name = os.getenv('S3_BUCKET_NAME')
 
         options = Options()
         self._add_options(options)
@@ -41,7 +55,7 @@ class InstagramScraper:
     
     def _create_driver(self, chrome_options):
         # Initialize WebDriver
-        service = Service()
+        service = Service('/app/.chrome-for-testing/chromedriver-linux64/chromedriver')
         driver = webdriver.Chrome(service=service, options=chrome_options)
         
         return driver
@@ -109,6 +123,7 @@ class InstagramScraper:
         """
         try:
             club_info = self.get_club_info(club_username)
+            
             self.save_club_info(club_info)
             self.save_post_info(club_username)
             return True
@@ -200,34 +215,84 @@ class InstagramScraper:
         """Save the description and date of each post into a file"""
 
         post_links = self._get_club_post_links(club_username)
-
-        club_path = os.path.join(os.path.dirname(__file__), "..", "data", club_username, "posts")
-        if not os.path.exists(club_path):
-            os.makedirs(club_path)
-
+        
         for post in post_links:
             description, date, post_pic = self.get_post_info(post)
-            post_path = os.path.join(club_path, f"{date}.json")
+            post_data = {"Description": description, "Date": date, "Picture": post_pic}
+            post_path = f"/data/{club_username}/posts/{date}.json"
             
-            if os.path.exists(post_path):
-                logger.info(f"This post path is already created: {post_path}")
-                continue
-            else:
-                with open(post_path, "w") as file:
-                    json.dump({"Description": description, "Date": date, "Picture": post_pic}, file)
+            for post in post_links:
+                description, date, post_pic = self.get_post_info(post)
+                post_data = {"Description": description, "Date": date, "Picture": post_pic}
+                post_path = f"{club_username}/posts/{date}.json"
+                
+                try:
+                    self.s3.put_object(
+                        Bucket=self.bucket_name,
+                        Key=post_path,
+                        Body=json.dumps(post_data).encode("utf-8")
+                    )
+                    logger.info(f"Post saved to S3: {post_path}")
+                except (NoCredentialsError, PartialCredentialsError) as e:
+                    logger.error(f"Credentials error: {e}")
+                except ClientError as e:
+                    logger.error(f"Failed to save post to S3: {e}")
+                
+            # try:
+            #     self.dbx.files_upload(
+            #         json.dumps(post_data).encode("utf-8"),
+            #         post_path,
+            #         mode=WriteMode.overwrite
+            #     )
+            #     logger.info(f"Post saved to Dropbox: {post_path}")
+            # except ApiError as e:
+            #     logger.error(f"Failed to save post to Dropbox: {e}")
+        
+
+        
+        # club_path = os.path.join(os.path.dirname(__file__), "..", "data", club_username, "posts")
+        # if not os.path.exists(club_path):
+        #     os.makedirs(club_path)
+
+        # for post in post_links:
+        #     description, date, post_pic = self.get_post_info(post)
+        #     post_path = os.path.join(club_path, f"{date}.json")
+            
+        #     if os.path.exists(post_path):
+        #         logger.info(f"This post path is already created: {post_path}")
+        #         continue
+        #     else:
+        #         with open(post_path, "w") as file:
+        #             json.dump({"Description": description, "Date": date, "Picture": post_pic}, file)
 
     def save_club_info(self, club_info: json):
         """Save the club information into a file"""
+        instagram_handle = club_info[0]['Instagram Handle']
         
-        club_info_path = os.path.join(os.path.dirname(__file__), "..", "data", f"{club_info[0]['Instagram Handle']}")
+        # Define the S3 key (path) where the file will be saved
+        club_info_path = f"{instagram_handle}/club_info.json"
 
-        if not os.path.exists(club_info_path):
-            os.makedirs(club_info_path)
-            logger.info(f"Directory, {club_info_path} created.")
+        try:
+            # Upload the club info to S3
+            self.s3.put_object(
+                Bucket=self.bucket_name,
+                Key=club_info_path,
+                Body=json.dumps(club_info[0]).encode("utf-8")
+            )
+            logger.info(f"Club info saved to S3: {club_info_path}")
+        except (NoCredentialsError, PartialCredentialsError) as e:
+            logger.error(f"Credentials error: {e}")
+        except ClientError as e:
+            logger.error(f"Failed to save club info to S3: {e}")
+        # club_info_path = os.path.join(os.path.dirname(__file__), "..", "data", f"{club_info[0]['Instagram Handle']}")
 
-        with open(f"{club_info_path}/club_info.json", "w") as file:
-            json.dump(club_info[0], file)
-            logger.info("Club info saved.")
+        # if not os.path.exists(club_info_path):
+        #     os.makedirs(club_info_path)
+        #     logger.info(f"Directory, {club_info_path} created.")
+
+        # with open(f"{club_info_path}/club_info.json", "w") as file:
+        #     json.dump(club_info[0], file)
+        #     logger.info("Club info saved.")
 
     def check_instagram_handle(self, club_username) -> bool:
         try:
@@ -427,7 +492,7 @@ class InstagramScraper:
             "--enable-automation",
             "--password-store=basic",
             "--use-mock-keychain",
-            "--blink-settings=imagesEnabled=false",
+            #"--blink-settings=imagesEnabled=false",
         ]
         for arg in args:
             option.add_argument(arg)
@@ -465,6 +530,7 @@ class InstagramScraper:
                 self._driver.add_cookie(cookie)
 
     def _get_cookies(self):
+        """DEPRECATED; requires fix"""
         try:
             save_button = self._wait.until(
                 EC.element_to_be_clickable((By.XPATH, "//button[contains(text(),'Save info')]")))
