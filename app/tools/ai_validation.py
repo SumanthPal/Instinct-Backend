@@ -6,8 +6,9 @@ import json
 from typing import List, Dict
 import time
 import sys
+import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.logger import logger
+from tools.logger import logger
 
 class EventParser:
     def __init__(self):
@@ -18,7 +19,7 @@ class EventParser:
 
 
     def validate_username(self, username)-> str:
-        user_dir =  os.path.join(os.path.dirname(__file__), '..', 'data', username)
+        user_dir =  os.path.join(os.path.dirname(__file__), '..', '..', 'data', username)
         if not os.path.exists(user_dir):
             raise FileNotFoundError(f"Directory for {username} not found")
         post_dir = os.path.join(user_dir, "posts")
@@ -132,7 +133,9 @@ class EventParser:
                 post_data = json.load(file)
             if  parsed_info == []:
                 post_data['Parsed'] = []
-                logger.info(f"{post_path} is empty; parsed will be empty.")
+                with open(post_path, 'w') as file:
+                    json.dump(post_data, file)
+                    logger.info(f"{post_path} is empty; parsed will be empty.")
                 return
             post_data['Parsed'] = parsed_info
             with open(post_path, 'w') as file:
@@ -156,7 +159,7 @@ if __name__ == "__main__":
     # Example usage
     parser = EventParser()
     
-    parser.parse_all_posts("akpsiuci")
+    parser.parse_all_posts("phialphadelta")
   
 
     

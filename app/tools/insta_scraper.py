@@ -15,16 +15,15 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.logger import logger
+
 import dropbox 
 from dropbox.exceptions import ApiError
 from dropbox.files import WriteMode
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError, ClientError
-
-
-from data_retriever import DataRetriever
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from tools.logger import logger
 #import chromedriver_binary  # This automatically sets up ChromeDriver
 
 
@@ -34,14 +33,14 @@ class InstagramScraper:
         self._username = username
         self._password = password
         self._current_page = "none"
-        self.dbx = dropbox.Dropbox(os.getenv("DROPBOX_API_KEY"))
-        self.s3 = boto3.client(
-            's3',
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY'),
-            aws_secret_access_key=os.getenv('AWS_PRIVATE_KEY'),
-            region_name=os.getenv('AWS_REGION', 'us-west-1')
-        )
-        self.bucket_name = os.getenv('S3_BUCKET_NAME')
+        # self.dbx = dropbox.Dropbox(os.getenv("DROPBOX_API_KEY"))
+        # self.s3 = boto3.client(
+        #     's3',
+        #     aws_access_key_id=os.getenv('AWS_ACCESS_KEY'),
+        #     aws_secret_access_key=os.getenv('AWS_PRIVATE_KEY'),
+        #     region_name=os.getenv('AWS_REGION', 'us-west-1')
+        # )
+        # self.bucket_name = os.getenv('S3_BUCKET_NAME')
 
         options = Options()
         self._add_options(options)
@@ -50,13 +49,14 @@ class InstagramScraper:
         logger.info("initing driver")
         self._driver = self._create_driver(options)
         logger.info("driver inited")
-        self._wait = WebDriverWait(self._driver, 7)
+        self._wait = WebDriverWait(self._driver, 5)
         
         
     
     def _create_driver(self, chrome_options):
         # Initialize WebDriver
-        service = Service('/app/.chrome-for-testing/chromedriver-linux64/chromedriver')
+        #For heroku: '/app/.chrome-for-testing/chromedriver-linux64/chromedriver'
+        service = Service()
         driver = webdriver.Chrome(service=service, options=chrome_options)
         
         return driver
@@ -131,9 +131,7 @@ class InstagramScraper:
         except AttributeError as e:
             logger.error(f"Enter a valid username {club_username}")
             return False
-        except Exception as e:
-            logger.error(f"Scraping failed: {e}", exc_info=True)
-            return False
+        
 
     # def club_is_in_uci(self, text: str, username: str, insta_handle: str) -> bool:
     #     """Check if the text refers to a club at UC Irvine."""
@@ -201,14 +199,17 @@ class InstagramScraper:
             # looks for post time
             post_time = post_soup.find('time', class_="_a9ze _a9zf")
             date = post_time['datetime']
-            
+            img_src = 0
+            try:
             # look for post pic
-            img_tag = post_soup.find('img', class_="x5yr21d xu96u03 x10l6tqk x13vifvy x87ps6o xh8yej3")
-            img_src = img_tag.get('src')
-            
+                img_tag = post_soup.find('img', class_="x5yr21d xu96u03 x10l6tqk x13vifvy x87ps6o xh8yej3")
+                img_src = img_tag.get('src')
+            except:
+                img_src = 'http://www.w3.org/2000/svg'
+        
         except WebDriverException as e:
             logger.error(f"Error fetching post info: {e}")
-            self._driver_quit()
+            
 
         return description, date, img_src
 
@@ -217,83 +218,39 @@ class InstagramScraper:
 
         post_links = self._get_club_post_links(club_username)
         
+        
+            
+            
+        
+        club_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", club_username, "posts")
+        if not os.path.exists(club_path):
+            os.makedirs(club_path)
+
         for post in post_links:
             description, date, post_pic = self.get_post_info(post)
             post_data = {"Description": description, "Date": date, "Picture": post_pic}
-            post_path = f"/data/{club_username}/posts/{date}.json"
+            post_path = os.path.join(club_path, f"{date}.json")
             
-            for post in post_links:
-                description, date, post_pic = self.get_post_info(post)
-                post_data = {"Description": description, "Date": date, "Picture": post_pic}
-                post_path = f"{club_username}/posts/{date}.json"
-                
-                try:
-                    self.s3.put_object(
-                        Bucket=self.bucket_name,
-                        Key=post_path,
-                        Body=json.dumps(post_data).encode("utf-8")
-                    )
-                    logger.info(f"Post saved to S3: {post_path}")
-                except (NoCredentialsError, PartialCredentialsError) as e:
-                    logger.error(f"Credentials error: {e}")
-                except ClientError as e:
-                    logger.error(f"Failed to save post to S3: {e}")
-                
-            # try:
-            #     self.dbx.files_upload(
-            #         json.dumps(post_data).encode("utf-8"),
-            #         post_path,
-            #         mode=WriteMode.overwrite
-            #     )
-            #     logger.info(f"Post saved to Dropbox: {post_path}")
-            # except ApiError as e:
-            #     logger.error(f"Failed to save post to Dropbox: {e}")
-        
-
-        
-        # club_path = os.path.join(os.path.dirname(__file__), "..", "data", club_username, "posts")
-        # if not os.path.exists(club_path):
-        #     os.makedirs(club_path)
-
-        # for post in post_links:
-        #     description, date, post_pic = self.get_post_info(post)
-        #     post_path = os.path.join(club_path, f"{date}.json")
-            
-        #     if os.path.exists(post_path):
-        #         logger.info(f"This post path is already created: {post_path}")
-        #         continue
-        #     else:
-        #         with open(post_path, "w") as file:
-        #             json.dump({"Description": description, "Date": date, "Picture": post_pic}, file)
+            if os.path.exists(post_path):
+                logger.info(f"This post path is already created: {post_path}")
+                continue
+            else:
+                logger.info(f"creating post at: {post_path}")
+                with open(post_path, "w") as file:
+                    json.dump(post_data, file)
 
     def save_club_info(self, club_info: json):
         """Save the club information into a file"""
-        instagram_handle = club_info[0]['Instagram Handle']
-        
-        # Define the S3 key (path) where the file will be saved
-        club_info_path = f"{instagram_handle}/club_info.json"
 
-        try:
-            # Upload the club info to S3
-            self.s3.put_object(
-                Bucket=self.bucket_name,
-                Key=club_info_path,
-                Body=json.dumps(club_info[0]).encode("utf-8")
-            )
-            logger.info(f"Club info saved to S3: {club_info_path}")
-        except (NoCredentialsError, PartialCredentialsError) as e:
-            logger.error(f"Credentials error: {e}")
-        except ClientError as e:
-            logger.error(f"Failed to save club info to S3: {e}")
-        # club_info_path = os.path.join(os.path.dirname(__file__), "..", "data", f"{club_info[0]['Instagram Handle']}")
+        club_info_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", f"{club_info[0]['Instagram Handle']}")
 
-        # if not os.path.exists(club_info_path):
-        #     os.makedirs(club_info_path)
-        #     logger.info(f"Directory, {club_info_path} created.")
+        if not os.path.exists(club_info_path):
+            os.makedirs(club_info_path)
+            logger.info(f"Directory, {club_info_path} created.")
 
-        # with open(f"{club_info_path}/club_info.json", "w") as file:
-        #     json.dump(club_info[0], file)
-        #     logger.info("Club info saved.")
+        with open(f"{club_info_path}/club_info.json", "w") as file:
+            json.dump(club_info[0], file)
+            logger.info("Club info saved.")
 
     def check_instagram_handle(self, club_username) -> bool:
         try:
@@ -449,7 +406,7 @@ class InstagramScraper:
         :param club_username:
         :return:
         """
-        club_info_path = os.path.join(os.path.dirname(__file__), "..", "data", club_username, "club_info.json")
+        club_info_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", club_username, "club_info.json")
         with open(club_info_path, "r") as file:
             clubs_info = json.load(file)
 
@@ -576,6 +533,8 @@ class InstagramScraper:
             # If no error message is found, return None (indicating no error)
             return None
 
+
+
 def chunk_list(lst, n):
     """Divide a list into n chunks, prioritizing evenly-sized distributions."""
     avg = len(lst) // n
@@ -590,6 +549,23 @@ def chunk_list(lst, n):
         start = end
 
     return chunks
+
+def scrape_with_retries(scraper, username, max_retries=3, delay=5):
+    for attempt in range(max_retries):
+        try:
+            scraper.store_club_data(username)
+            logger.info(f"Scraping of {username} complete.")
+            return
+        except Exception as e:
+            logger.warning(f"Attempt {attempt + 1} failed for {username}: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(delay)
+            else:
+                logger.error(f"Restarting WebDriver after repeated failures for {username}.")
+                scraper._driver_quit()
+                scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
+                scraper.login()
+
 def scrape_sequence(username_list: list[str]) -> None:
     """
     Scrape the Instagram page of a club and store the data.
@@ -598,20 +574,24 @@ def scrape_sequence(username_list: list[str]) -> None:
     """
     scraper = None
     try:
+        
         scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
         logger.info("Init scraper")
         scraper.login()
         logger.info("Logged in")
         for username in username_list:
             logger.info(f"Scraping {username}...")
-            scraper.store_club_data(username)
+            scrape_with_retries(scraper, username)
             logger.info(f"Scraping of {username} complete.")
+
     except Exception as e:
         logger.error(f"An error occurred: {e}")
     finally:
         if scraper:
             scraper._driver_quit()
+    
 
+    
 def multi_threaded_scrape(clubs: list[str], max_threads: int) -> None:
     """
     Runs scraper on multiple threads, dividing clubs among threads.

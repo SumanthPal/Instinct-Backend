@@ -5,7 +5,7 @@ from botocore.exceptions import NoCredentialsError, ClientError
 import dotenv
 import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.logger import logger
+from app.tools.logger import logger
 class DataRetriever:
     def __init__(self):
         dotenv.load_dotenv()
@@ -62,7 +62,7 @@ class DataRetriever:
         """Fetch ics file for a club in S3"""
         try:
             # Construct the S3 key for the .ics file
-            ics_key = f"data/club/{club_name}/calendar_file.ics"
+            ics_key = f"data/{club_name}/calendar_file.ics"
 
             # Fetch the .ics file from S3
             response = self.s3.get_object(Bucket=self.bucket_name, Key=ics_key)
