@@ -52,8 +52,8 @@ class EventParser:
             post_text = post_data['Description']
             post_date = post_data['Date']
 
-            if 'Parsed' in post_data:
-                raise Exception("Post has already been parsed.")
+            # if 'Parsed' in post_data:
+            #     raise Exception("Post has already been parsed.")
 
             # Retry mechanism for API calls
             for attempt in range(MAX_RETRIES):

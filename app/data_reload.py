@@ -25,7 +25,7 @@ def main():
     
     logger.info("initiating ai and calendar file creation")
     for club in clubs:
-        #parser.parse_all_posts(club)
+        parser.parse_all_posts(club)
         cc.create_calendar_file(club)
         
     #s3_client.delete_data()
