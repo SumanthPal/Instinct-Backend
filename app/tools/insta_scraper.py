@@ -194,21 +194,25 @@ class InstagramScraper:
 
             # Looks for post description
             h1_element = post_soup.find('h1', class_="_ap3a _aaco _aacu _aacx _aad7 _aade")
-            description = h1_element.text
+            description = h1_element.text if h1_element else ""
+
 
             # looks for post time
             post_time = post_soup.find('time', class_="_a9ze _a9zf")
             date = post_time['datetime']
             img_src = 0
-            try:
+            
             # look for post pic
-                img_tag = post_soup.find('img', class_="x5yr21d xu96u03 x10l6tqk x13vifvy x87ps6o xh8yej3")
-                img_src = img_tag.get('src')
-            except:
-                img_src = 'http://www.w3.org/2000/svg'
+            img_tag = post_soup.find('img', class_="x5yr21d xu96u03 x10l6tqk x13vifvy x87ps6o xh8yej3")
+            try:
+                img_src = img_tag.get('src', 'http://www.w3.org/2000/svg') if img_tag else 'http://www.w3.org/2000/svg'
+            except Exception as e:
+                logger.info("could not find img_src")
+                img_src = "http://www.w3.org/2000/svg"
+            
         
         except WebDriverException as e:
-            logger.error(f"Error fetching post info: {e}")
+            logger.error(f"Error fetching post info: {str(e)}")
             
 
         return description, date, img_src
@@ -227,17 +231,21 @@ class InstagramScraper:
             os.makedirs(club_path)
 
         for post in post_links:
-            description, date, post_pic = self.get_post_info(post)
-            post_data = {"Description": description, "Date": date, "Picture": post_pic}
-            post_path = os.path.join(club_path, f"{date}.json")
-            
-            if os.path.exists(post_path):
-                logger.info(f"This post path is already created: {post_path}")
+            try:
+                description, date, post_pic = self.get_post_info(post)
+                post_data = {"Description": description, "Date": date, "Picture": post_pic}
+                post_path = os.path.join(club_path, f"{date}.json")
+                
+                if os.path.exists(post_path):
+                    logger.info(f"This post path is already created: {post_path}")
+                    continue
+                else:
+                    logger.info(f"creating post at: {post_path}")
+                    with open(post_path, "w") as file:
+                        json.dump(post_data, file)
+            except:
+                logger.info("scrapper could not properly scrape. execution sequence will skip post.")
                 continue
-            else:
-                logger.info(f"creating post at: {post_path}")
-                with open(post_path, "w") as file:
-                    json.dump(post_data, file)
 
     def save_club_info(self, club_info: json):
         """Save the club information into a file"""
@@ -429,7 +437,7 @@ class InstagramScraper:
             "--disable-gpu",
             "--disable-dev-shm-usage",
             "--no-sandbox",
-            "--headless",  # Run in headless mode for better speed
+            #"--headless",  # Run in headless mode for better speed
             "--disable-software-rasterizer",
             "--disable-background-networking",
             "--disable-background-timer-throttling",
@@ -450,7 +458,7 @@ class InstagramScraper:
             "--enable-automation",
             "--password-store=basic",
             "--use-mock-keychain",
-            #"--blink-settings=imagesEnabled=false",
+            "--blink-settings=imagesEnabled=false",
         ]
         for arg in args:
             option.add_argument(arg)
@@ -555,7 +563,7 @@ def scrape_with_retries(scraper, username, max_retries=3, delay=5):
         try:
             scraper.store_club_data(username)
             logger.info(f"Scraping of {username} complete.")
-            return
+            return scraper
         except Exception as e:
             logger.warning(f"Attempt {attempt + 1} failed for {username}: {e}")
             if attempt < max_retries - 1:
@@ -565,6 +573,7 @@ def scrape_with_retries(scraper, username, max_retries=3, delay=5):
                 scraper._driver_quit()
                 scraper = InstagramScraper(os.getenv("INSTAGRAM_USERNAME"), os.getenv("INSTAGRAM_PASSWORD"))
                 scraper.login()
+                return scraper
 
 def scrape_sequence(username_list: list[str]) -> None:
     """
@@ -581,7 +590,7 @@ def scrape_sequence(username_list: list[str]) -> None:
         logger.info("Logged in")
         for username in username_list:
             logger.info(f"Scraping {username}...")
-            scrape_with_retries(scraper, username)
+            scraper = scrape_with_retries(scraper, username)
             logger.info(f"Scraping of {username} complete.")
 
     except Exception as e:
@@ -619,7 +628,7 @@ if __name__ == "__main__":
 
         dotenv.load_dotenv()
         starttime = time.time()
-        scrape_sequence(['phialphadelta'])
+        multi_threaded_scrape(['ucisailing','180dcuci'], 1)
         
             
         

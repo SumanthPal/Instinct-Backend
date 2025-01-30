@@ -1,9 +1,9 @@
 from io import BytesIO, StringIO
 from flask import Flask, request, jsonify, send_file, abort
-from ai_validation import EventParser
-from calendar_connection import CalendarConnection
-from insta_scraper import InstagramScraper, multi_threaded_scrape
-from data_retriever import DataRetriever
+from app.tools.ai_validation import EventParser
+from app.tools.calendar_connection import CalendarConnection
+from app.tools.insta_scraper import InstagramScraper, multi_threaded_scrape
+from app.tools.data_retriever import DataRetriever
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from threading import Lock
@@ -15,8 +15,7 @@ import atexit
 
 # Load environment variables
 dotenv.load_dotenv()
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from utils.logger import logger
+from tools.logger import logger
 
 # Initialize dependencies
 calendar = CalendarConnection()
