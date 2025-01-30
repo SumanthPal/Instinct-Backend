@@ -1,13 +1,15 @@
 from io import BytesIO, StringIO
 from flask import Flask, request, jsonify, send_file, abort
-from app.tools.ai_validation import EventParser
-from app.tools.calendar_connection import CalendarConnection
-from app.tools.insta_scraper import InstagramScraper, multi_threaded_scrape
-from app.tools.data_retriever import DataRetriever
+from tools.ai_validation import EventParser
+from tools.calendar_connection import CalendarConnection
+from tools.insta_scraper import InstagramScraper, multi_threaded_scrape
+from tools.data_retriever import DataRetriever
+from tools.s3_client import S3Client
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from threading import Lock
 from flask_cors import CORS
+
 import dotenv
 import os
 import sys
@@ -20,6 +22,7 @@ from tools.logger import logger
 # Initialize dependencies
 calendar = CalendarConnection()
 retriever = DataRetriever()
+s3_client = S3Client()
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins temporarily (adjust for production)
 
@@ -41,14 +44,30 @@ def reload_data():
         job_running = True
 
     try:
-        logger.info("Starting data reload...")
-        parser = EventParser()
+        
+    
+        logger.info("objects have been initiated")
+        
+        logger.info("initiating scraping with 1 threads")
+        multi_threaded_scrape(clubs, 1)
+        logger.info('successful scrape!')
         clubs = retriever.fetch_club_instagram_from_manifest()
-        multi_threaded_scrape(clubs, 3)
+        parser = EventParser
 
+        logger.info("initiating ai and calendar file creation")
         for club in clubs:
             parser.parse_all_posts(club)
             calendar.create_calendar_file(club)
+            
+        s3_client.delete_data()
+        logger.info('s3 data has been deleted')
+        s3_client.upload_data()
+    
+
+    #create/append the new manifest accordingly
+        retriever.create_list_of_clubs()
+    
+        logger.info("completed.")
 
         logger.info("Data reload completed successfully.")
     except Exception as e:
@@ -106,10 +125,13 @@ def club():
 @app.route("/club/<username>", methods=['GET'])
 def club_data(username):
     try:
+        if not retriever.club_data_exists(username):
+            s3_client.download_instagram_directory(username)
+            
         logger.info(f"Fetching data for club: {username}")
         return retriever.fetch_club_info(username)
-    except FileNotFoundError:
-        return jsonify({"message": "Club not found"}), 404
+    except FileNotFoundError as e:
+        return jsonify({"message": f"Club not found, {e}"}), 404
     except Exception as e:
         logger.error(f"Error fetching club data: {e}")
         return jsonify({"message": f"Error: {e}"}), 500
@@ -118,6 +140,9 @@ def club_data(username):
 @app.route("/club/<username>/posts", methods=['GET'])
 def club_post_data(username):
     try:
+        if not retriever.club_data_exists(username):
+            s3_client.download_instagram_directory(username)
+            
         logger.info(f"Fetching posts for club: {username}")
         return retriever.fetch_club_posts(username)
     except FileNotFoundError:
@@ -140,6 +165,9 @@ def club_manifest():
 @app.route("/club/<username>/calendar.ics", methods=['GET'])
 def club_calendar(username):
     try:
+        if not retriever.club_data_exists(username):
+            s3_client.download_instagram_directory(username)
+            
         logger.info(f"Fetching calendar for club: {username}")
         ics_content = retriever.fetch_club_calendar(username)
         ics_file = BytesIO(ics_content)
@@ -149,13 +177,7 @@ def club_calendar(username):
             as_attachment=False,  # Set to True if you want to force download
             mimetype='text/calendar',  # MIME type for .ics files
         )
-        # calendar.create_calendar_file(username)
-        # return send_file(
-        #     calendar.get_ics_path(username),
-        #     download_name=f"{username}_calendar.ics",
-        #     as_attachment=False,
-        #     mimetype='text/calendar',
-        # )
+        
     except FileNotFoundError as e:
         logger.error(f"Calendar file not found for {username}: {e}")
         abort(404, description="Calendar file not found")

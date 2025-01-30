@@ -25,7 +25,11 @@ class CalendarConnection:
                     self.calendar = Calendar(f.read())
 
             # Fetch post information
-            posts = self.retriever.fetch_club_posts(username)
+            try:
+                posts = self.retriever.fetch_club_posts(username)
+            except FileNotFoundError:
+                logger.error('club does not exist unable to create calendar file')
+                return
 
             # Add events to the calendar
             for post in posts:

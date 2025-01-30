@@ -31,7 +31,6 @@ def main():
     s3_client.delete_data()
     logger.info('s3 data has been deleted')
     s3_client.upload_data()
-    logger.info('s3 data has been updated')
     
     
     #create/append the new manifest accordingly

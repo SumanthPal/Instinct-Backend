@@ -3,7 +3,7 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 
-import logger
+import app.tools.logger as logger
 
 def file_cleanup():
     """

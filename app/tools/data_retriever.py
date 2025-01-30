@@ -66,7 +66,7 @@ class DataRetriever:
             logger.info('home file successfully created.')
         
         with open(home_path, 'w') as f:
-                json.dump([], file)
+                json.dump([], f)
                 
         
         for idx, club in enumerate(club_data, start=1):

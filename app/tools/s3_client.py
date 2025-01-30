@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 # Setup logger
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class S3Client:
@@ -54,8 +55,8 @@ class S3Client:
     
     def _download_directory(self, s3_directory: str, local_directory: str):
         """
-        Downloads all files in a specific directory from S3 to a local directory.
-        Skips downloading files that already exist in the local directory.
+        Downloads all files in a specific directory from S3 to a local directory,
+        maintaining the file hierarchy structure.
 
         :param s3_directory: The S3 directory (prefix) to fetch files from.
         :param local_directory: The local directory to save the files to.
@@ -70,19 +71,25 @@ class S3Client:
         # Download each file
         for file_key in file_keys:
             # Construct the local file path
-            local_file_path = os.path.join(local_directory, os.path.basename(file_key))
+            relative_path = os.path.relpath(file_key, s3_directory)  # Preserve relative path
+            local_file_path = os.path.join(local_directory, relative_path)
+            
+            # Ensure the local directory for the file exists
+            local_file_dir = os.path.dirname(local_file_path)
+            if not os.path.exists(local_file_dir):
+                os.makedirs(local_file_dir)
             
             # Skip downloading if the file already exists
             if os.path.exists(local_file_path):
-                print(f"File already exists: {local_file_path}, skipping download.")
+                self.logger.info(f"File already exists: {local_file_path}, skipping download.")
                 continue
         
             # Download the file
             self.s3.download_file(self.bucket_name, file_key, local_file_path)
-            print(f"Downloaded: {file_key} to {local_file_path}")
-            
+            self.logger.info(f"Downloaded: {file_key} to {local_file_path}")
+                
     def download_instagram_directory(self, instagram: str):
-        self._download_directory(f'data/{instagram}', f'../../data/{instagram}')
+        self._download_directory(f'data/{instagram}', f'./data/{instagram}')
         
 
     def delete_directory(self, instagram: str):
@@ -91,7 +98,7 @@ class S3Client:
 
         :param directory: The directory (prefix) to delete.
         """
-        directory = f'data/{instagram}'
+        directory = f'./data/{instagram}'
         try:
             files_to_delete = self.get_all_files_in_directory(directory)
             if files_to_delete:
@@ -108,7 +115,7 @@ class S3Client:
         self.delete_directory('')
         
     def upload_data(self):
-        self.upload_directory('../../data', 'data')
+        self.upload_directory('./data', 'data')
         
     def upload_directory(self, local_dir: str, s3_prefix: str):
         """
@@ -131,9 +138,5 @@ class S3Client:
 if __name__ == "__main__":
     s3_client = S3Client()
 
-    # Fetch all files from a specific directory
-    directory = 'data/icssc.uci'
-    files = s3_client.download_instagram_directory('icssc.uci')
-    print(f"Files in {directory}: {files}")
-
-    
+    s3_client.delete_data()
+    s3_client.upload_data()
