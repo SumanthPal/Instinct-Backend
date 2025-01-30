@@ -98,7 +98,7 @@ class S3Client:
 
         :param directory: The directory (prefix) to delete.
         """
-        directory = f'./data/{instagram}'
+        directory = f'data/{instagram}'
         try:
             files_to_delete = self.get_all_files_in_directory(directory)
             if files_to_delete:
@@ -139,4 +139,4 @@ if __name__ == "__main__":
     s3_client = S3Client()
 
     s3_client.delete_data()
-    s3_client.upload_data()
+    

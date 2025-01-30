@@ -140,6 +140,7 @@ class EventParser:
             post_data['Parsed'] = parsed_info
             with open(post_path, 'w') as file:
                 logger.info(f"Successfully stored {post_path}")
+                logger.info(f"parsed info: {parsed_info}")
                 json.dump(post_data, file)
         except Exception as e:
             logger.warning(f"Error while storing parsed info: {e}\n response: {post_data}")
@@ -159,7 +160,7 @@ if __name__ == "__main__":
     # Example usage
     parser = EventParser()
     
-    parser.parse_all_posts("phialphadelta")
+    parser.parse_all_posts("180dcuci")
   
 
     

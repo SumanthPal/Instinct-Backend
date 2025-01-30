@@ -11,7 +11,7 @@ from tools.data_retriever import DataRetriever
 3
 class CalendarConnection:
     def __init__(self):
-        self.calendar = Calendar()
+        
         self.retriever = DataRetriever()
         
     def create_calendar_file(self, username):
@@ -19,10 +19,9 @@ class CalendarConnection:
    
             ics_path = os.path.join(self.retriever.get_user_dir(), username, "calendar_file.ics")
             
+            calendar = Calendar()
             # Load the calendar file if it exists
-            if self.check_for_presence_of_file(ics_path):
-                with open(ics_path, 'r') as f:
-                    self.calendar = Calendar(f.read())
+            
 
             # Fetch post information
             try:
@@ -52,8 +51,8 @@ class CalendarConnection:
                             new_event.description = description
                             
                             # Check for duplicates and add the event
-                            if not self.is_duplicate(new_event):
-                                self.calendar.events.add(new_event)
+                            if not self.is_duplicate(new_event, calendar):
+                                calendar.events.add(new_event)
                         except Exception as e:
                             logger.error(f"Error while adding event: {e} for {username}")
                 except KeyError:
@@ -62,7 +61,7 @@ class CalendarConnection:
 
             # Save the updated calendar to the .ics file
             with open(ics_path, 'w') as f:
-                f.writelines(self.calendar)
+                f.writelines(calendar)
 
             logger.info(f"Calendar file successfully created/updated for {username}")
         
@@ -75,7 +74,7 @@ class CalendarConnection:
         return os.path.join(self.retriever.get_user_dir(), username, "calendar_file.ics")
     
 
-    def is_duplicate(self, new_event):
+    def is_duplicate(self, new_event, calendar):
         """
         Check if the event already exists in the calendar.
 
@@ -85,7 +84,7 @@ class CalendarConnection:
         Returns:
             bool: True if a duplicate exists, False otherwise.
         """
-        for event in self.calendar.events:
+        for event in calendar.events:
             if (event.name == new_event.name and event.begin == new_event.begin):
                 return True
         return False
@@ -93,6 +92,6 @@ class CalendarConnection:
 
 if __name__ == "__main__":
     calendar = CalendarConnection()
-    calendar.create_calendar_file("phialphadelta")
+    calendar.create_calendar_file("icssc.uci")
     
     

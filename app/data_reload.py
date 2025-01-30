@@ -20,17 +20,17 @@ def main():
     logger.info("objects have been initiated")
     
     logger.info("initiating scraping with 1 threads")
-    multi_threaded_scrape(clubs, 1)
+   # multi_threaded_scrape(clubs, 1)
     logger.info('successful scrape!')
     
     logger.info("initiating ai and calendar file creation")
     for club in clubs:
-        parser.parse_all_posts(club)
+        #parser.parse_all_posts(club)
         cc.create_calendar_file(club)
         
-    s3_client.delete_data()
+    #s3_client.delete_data()
     logger.info('s3 data has been deleted')
-    s3_client.upload_data()
+    #s3_client.upload_data()
     
     
     #create/append the new manifest accordingly

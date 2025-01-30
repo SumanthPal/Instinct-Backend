@@ -628,7 +628,7 @@ if __name__ == "__main__":
 
         dotenv.load_dotenv()
         starttime = time.time()
-        multi_threaded_scrape(['ucisailing','180dcuci'], 1)
+        multi_threaded_scrape(['icssc.uci'], 1)
         
             
         
