@@ -89,16 +89,6 @@ class DataRetriever:
                     json.dump(data, file, indent=4) 
                 
                 
-                    
-                
-        
-        
-        
-    
-            
-        
-        
-        
     
     def fetch_club_posts(self, club_name):
         if not self.club_data_exists(club_name):
@@ -120,7 +110,7 @@ class DataRetriever:
         return Path(post_name).exists()
     
     def fetch_manifest(self) -> json:
-        with open(os.path.join(self.working_path, 'club_manifest.json'), 'r') as f:
+        with open(os.path.join(self.working_path, 'manifest.json'), 'r') as f:
             club_data = json.load(f)
             
         return club_data
@@ -131,6 +121,21 @@ class DataRetriever:
             clubs.append(c['instagram'])
         
         return clubs
+
+    def fetch_club_calendar(self, club_name):
+        """Fetch the .ics file for a club from the local filesystem and return its content"""
+        try:
+            # Construct the path for the .ics file
+            path = os.path.join(self.working_path, 'data', club_name, 'calendar_file.ics')
+
+            # Check if the file exists
+            if not os.path.exists(path):
+                raise FileNotFoundError(f".ics file 'data/{club_name}/calendar_file.ics' not found for club '{club_name}'")
+
+            # Return the path to the .ics file
+            return path
+        except FileNotFoundError as e:
+            raise e     
     
 if __name__ == "__main__":
     retriver = DataRetriever();

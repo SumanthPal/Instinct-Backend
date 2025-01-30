@@ -64,7 +64,7 @@ def reload_data():
         s3_client.upload_data()
     
 
-    #create/append the new manifest accordingly
+        #create/append the new manifest accordingly
         retriever.create_list_of_clubs()
     
         logger.info("completed.")
@@ -169,10 +169,10 @@ def club_calendar(username):
             s3_client.download_instagram_directory(username)
             
         logger.info(f"Fetching calendar for club: {username}")
-        ics_content = retriever.fetch_club_calendar(username)
-        ics_file = BytesIO(ics_content)
+        calendar_path = retriever.fetch_club_calendar(username)
+        
         return send_file(
-            ics_file,  # File-like object containing the .ics content
+            calendar_path,  # File-like object containing the .ics content
             download_name=f"{username}_calendar.ics",  # Name of the file when downloaded
             as_attachment=False,  # Set to True if you want to force download
             mimetype='text/calendar',  # MIME type for .ics files
